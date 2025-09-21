@@ -13,7 +13,11 @@
 .externalNativeBuild
 .cxx
 local.properties
+<<<<<<< Updated upstream
 
 # Archivos específicos de configuracion del IDE (Android Studio)
 /.idea/misc.xml
 /.idea/vcs.xml
+local.properties
+
+>>>>>>> Stashed changes
