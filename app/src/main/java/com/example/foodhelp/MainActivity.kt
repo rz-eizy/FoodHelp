@@ -9,9 +9,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
+import com.example.foodhelp.screens.Home
 import com.example.foodhelp.ui.theme.MyApplicationTheme
 
 class MainActivity : ComponentActivity() {
@@ -28,16 +27,8 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun Index() {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0x92FCE1E1)),
-        verticalArrangement = Arrangement.SpaceBetween
-    ) {
-        // Implementar el search bar
-        // Implementar categorias
-        // Implementar segmented botton
-    }
+    val app = Home()
+    app.HomePage()
 }
 
 @Preview(showBackground = true)
