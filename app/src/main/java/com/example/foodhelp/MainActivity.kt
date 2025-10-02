@@ -6,7 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
-import com.example.foodhelp.screens.Home
+import com.example.foodhelp.screens.HomePage
 import com.example.foodhelp.ui.theme.MyApplicationTheme
 
 class MainActivity : ComponentActivity() {
@@ -23,8 +23,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun Index() {
-    val app = Home()
-    app.HomePage()
+    HomePage()
 }
 
 @Preview(showBackground = true)

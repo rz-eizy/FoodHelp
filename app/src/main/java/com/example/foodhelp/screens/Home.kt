@@ -10,34 +10,29 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import com.example.foodhelp.components.BarraBusqueda
-import com.example.foodhelp.components.BotonDividido
 
-class Home {
-    @Composable
-    fun HomePage(){
-        val barraBusqueda = BarraBusqueda()
-        val botonSegmentado = BotonDividido()
-        Column (
+@Composable
+fun HomePage(){
+
+    Column (
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFD2D2D2)),
+        verticalArrangement = Arrangement.SpaceBetween
+    ){
+        //Agregar aqui barra de busqueda
+        Box(
             modifier = Modifier
-                .fillMaxSize()
-                .background(Color(0xFFD2D2D2)),
-            verticalArrangement = Arrangement.SpaceBetween
-        ){
-            barraBusqueda.MySearchBar()
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-            ) {
-                // Lo que va al medio
-            }
-            Box(
-                modifier = Modifier.fillMaxWidth(),
-                contentAlignment = Alignment.Center
-            ) {
-                botonSegmentado.BotonSegmentado()
-            }
+                .weight(1f)
+                .fillMaxWidth()
+        ) {
+            // Lo que va al medio
+        }
+        Box(
+            modifier = Modifier.fillMaxWidth(),
+            contentAlignment = Alignment.Center
+        ) {
+            //Agregar aqui el boton segmentado
         }
     }
 }
