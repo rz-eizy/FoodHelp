@@ -10,6 +10,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.tooling.preview.Preview
+import com.example.foodhelp.components.MySearchBar
+import com.example.foodhelp.ui.theme.MyApplicationTheme
 
 @Composable
 fun HomePage(){
@@ -20,7 +23,10 @@ fun HomePage(){
             .background(Color(0xFFD2D2D2)),
         verticalArrangement = Arrangement.SpaceBetween
     ){
-        //Agregar aqui barra de busqueda
+        MySearchBar(
+            onSearch = {}, // Aqui implementar la navegacion entre pantallas
+            modifier = Modifier.fillMaxWidth()
+        )
         Box(
             modifier = Modifier
                 .weight(1f)
@@ -34,5 +40,13 @@ fun HomePage(){
         ) {
             //Agregar aqui el boton segmentado
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun Previa(){
+    MyApplicationTheme {
+        HomePage()
     }
 }
