@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.foodhelp.components.HomeButton
+import com.example.foodhelp.components.RecipeContent
 import com.example.foodhelp.components.RecipeHeader
 import com.example.foodhelp.ui.theme.AppBackground
 import com.example.foodhelp.ui.theme.MyApplicationTheme
@@ -23,7 +24,7 @@ import com.example.foodhelp.ui.theme.SurfaceBackground
 @Composable
 fun RecipePage(){
     val nombre = "Nombre de receta"
-
+    val description = "Esto es una descripción"
     Scaffold(
         topBar = {
             RecipeHeader(
@@ -62,7 +63,11 @@ fun RecipePage(){
                     .weight(1f)
                     .fillMaxWidth(),
                 contentAlignment = Alignment.Center
-            ){/*    Contenido Central   */}
+            ){ RecipeContent(
+                nextClick = {},
+                modifier = Modifier,
+                description
+            ) }
         }
     }
 }
