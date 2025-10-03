@@ -1,16 +1,19 @@
 package com.example.foodhelp.components
 
-import android.widget.Button
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
+import com.example.foodhelp.ui.theme.ColorButton
+import com.example.foodhelp.ui.theme.ComponentAccent
 
 @Composable
 fun BotonSegmentado(){
@@ -32,7 +35,12 @@ fun SaveAndIngredients(
            onClick = onIngredientsClick,
            modifier = Modifier
                .weight(1f)
+               .height(50.dp)
                .padding(end = 8.dp),
+           colors = ButtonDefaults.buttonColors(
+               containerColor = ColorButton,
+               contentColor = ComponentAccent
+           ),
            shape = RoundedCornerShape(20.dp)
        ) { Text("Ingredientes") }
 
@@ -40,7 +48,12 @@ fun SaveAndIngredients(
             onClick = onSaveClick,
             modifier = Modifier
                 .weight(1f)
+                .height(50.dp)
                 .padding(start = 8.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = ColorButton,
+                contentColor = ComponentAccent
+            ),
             shape = RoundedCornerShape(20.dp)
         ) { Text("Guardar")}
     }
