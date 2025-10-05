@@ -7,6 +7,8 @@ import java.util.Set;
 @Table(name = "receta")
 public class Receta {
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
     private String nombre;
     private String descripcion;
 
@@ -33,6 +35,14 @@ public class Receta {
         this.tiempoPreparacion = tiempoPreparacion;
         this.descripcion = descripcion;
         this.nombre = nombre;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
     }
 
     public String getNombre() {

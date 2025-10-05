@@ -16,7 +16,7 @@ public class Ingrediente {
     private String unidad;
 
     @ManyToOne
-    @JoinColumn(name = "receta_nombre")
+    @JoinColumn(name = "receta_id")
     private Receta receta;
 
     public Ingrediente(){
