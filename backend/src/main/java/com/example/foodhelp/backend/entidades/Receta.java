@@ -23,6 +23,10 @@ public class Receta {
     @OneToMany(mappedBy = "receta",cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     private Set<Ingrediente> ingredientes;
 
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "categoria_id")
+    private Categoria categoria;
+
 
     public Receta(){
 
@@ -36,6 +40,15 @@ public class Receta {
         this.descripcion = descripcion;
         this.nombre = nombre;
     }
+
+    public Categoria getCategoria() {
+        return categoria;
+    }
+
+    public void setCategoria(Categoria categoria) {
+        this.categoria = categoria;
+    }
+
 
     public Long getId() {
         return id;
@@ -102,6 +115,7 @@ public class Receta {
                 ", imagenUrl='" + imagenUrl + '\'' +
                 ", instrucciones='" + instrucciones + '\'' +
                 ", ingredientes=" + ingredientes +
+                ", categoria=" + categoria +
                 '}';
     }
 }
