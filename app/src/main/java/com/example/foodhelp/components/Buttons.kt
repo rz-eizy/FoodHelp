@@ -44,7 +44,8 @@ fun HomeButton(
 @Composable
 fun NextButton(
     nextClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    text : String
 ){
     Button(
         onClick = nextClick,
@@ -56,5 +57,5 @@ fun NextButton(
             contentColor = ComponentAccent
         ),
         shape = RoundedCornerShape(40.dp)
-    ) { Text("¿Comenzar?") }
+    ) { Text(text) }
 }

@@ -40,7 +40,8 @@ fun RecipeContent(
         )
         NextButton(
             nextClick,
-            modifier = Modifier
+            modifier = Modifier,
+            text = "¿Comenzar?"
         )
     }
 }
