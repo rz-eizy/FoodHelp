@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
@@ -19,6 +20,7 @@ import com.example.foodhelp.ui.theme.ColorButton
 import com.example.foodhelp.ui.theme.ComponentAccent
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.foodhelp.ui.theme.MyApplicationTheme
 import com.example.foodhelp.ui.theme.SelectedToggle
@@ -43,7 +45,7 @@ fun MySegmentedButton(
                               1 -> {/*  Navegar a SearchIngredients  */}
                           }},
                 selected = index == selectedIndex,
-                label = {},
+                label = {Text(description)},
                 icon = {
                     Icon(
                         imageVector = icon,
@@ -52,9 +54,9 @@ fun MySegmentedButton(
                 },
                 colors = SegmentedButtonDefaults.colors(
                     activeContainerColor = ComponentAccent,
-                    activeContentColor = SelectedToggle,
+                    activeContentColor = ColorButton,
                     inactiveContainerColor = ColorButton,
-                    inactiveContentColor = ColorButton
+                    inactiveContentColor = ComponentAccent
                 )
             )
         }
