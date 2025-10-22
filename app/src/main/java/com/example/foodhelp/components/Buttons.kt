@@ -1,7 +1,6 @@
 package com.example.foodhelp.components
 
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -58,4 +57,23 @@ fun NextButton(
         ),
         shape = RoundedCornerShape(40.dp)
     ) { Text(text) }
+}
+
+@Composable
+fun IngredientButton(
+    modifier: Modifier = Modifier,
+    text: String,
+    onRemoveClick: () -> Unit
+){
+    Button(
+        onClick = onRemoveClick,
+        modifier = modifier,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = ColorButton,
+            contentColor = ComponentAccent
+        ),
+        shape = RoundedCornerShape(40.dp)
+    ) {
+        Text(text)
+    }
 }
