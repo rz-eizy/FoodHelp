@@ -31,4 +31,9 @@ public class ControladorReceta {
     public List<Receta> buscarRecetasPorNombre(@RequestParam String nombre) {
         return repositorioReceta.findByNombreContainingIgnoreCase(nombre);
     }
+
+    @GetMapping("/por-categoria")
+    public List<Receta> buscarRecetasPorCategoria(@RequestParam String categoria) {
+        return repositorioReceta.findByCategoriaNombreContainingIgnoreCase(categoria);
+    }
 }

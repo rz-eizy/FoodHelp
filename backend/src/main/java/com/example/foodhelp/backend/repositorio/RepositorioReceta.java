@@ -13,4 +13,10 @@ public interface RepositorioReceta extends JpaRepository<Receta, Long> {
     List<Receta> findByNombreContainingIgnoreCase(String nombre);
     // linea para conseguir recetas por nombre
 
+    List<Receta> findByCategoriaNombreContainingIgnoreCase(String nombreCategoria);
+    // linea para conseguir recetas por categoria
+
+
+
+
 }

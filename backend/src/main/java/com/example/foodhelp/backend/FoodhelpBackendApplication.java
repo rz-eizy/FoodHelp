@@ -44,7 +44,9 @@ public class FoodhelpBackendApplication {
 			}catch (Exception e){
 				System.out.println("Error al obtener recetas: " + e.getMessage());
 			}
-			pruebaBusquedaPorNombre();
+
+			pruebaBusquedaPorCategoria();
+
 		};
 	}
 
@@ -73,6 +75,33 @@ public class FoodhelpBackendApplication {
 			System.err.println("Error al realizar la busqueda: " + e.getMessage());
 		}
 	}
+
+	private void pruebaBusquedaPorCategoria() {
+
+		System.out.println("Prueba de busqueda por categoria :");
+
+
+		try (Scanner scanner = new Scanner(System.in)) {
+			System.out.print("ingresa el nombre de la categoria a buscar ");
+			String categoriabusqueda = scanner.nextLine();
+
+			System.out.println(" Ejecutando busqueda por termino: '" + categoriabusqueda );
+
+			List<Receta> recetasEncontradas = controladorReceta.buscarRecetasPorCategoria(categoriabusqueda);
+
+			if (recetasEncontradas.isEmpty()) {
+				System.out.println("No se encontraron recetas.");
+			} else {
+				System.out.println("Busqueda exitosa: Se encontraron " + recetasEncontradas.size() + " recetas.");
+				recetasEncontradas.forEach(receta -> {
+					System.out.println("  Resultado :  ID: " + receta.getId() + ", Nombre: " + receta.getNombre() + ", Descripcion" + receta.getDescripcion() );
+				});
+			}
+		} catch (Exception e) {
+			System.err.println("Error al realizar la busqueda: " + e.getMessage());
+		}
+	}
+
 
 	@Autowired
 	private DataSource dataSource;
