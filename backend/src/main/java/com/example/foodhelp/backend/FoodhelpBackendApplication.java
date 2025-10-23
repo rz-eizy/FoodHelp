@@ -5,11 +5,15 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
+
+import com.example.foodhelp.backend.controladores.ControladorReceta;
 import com.example.foodhelp.backend.entidades.Receta;
 import com.example.foodhelp.backend.repositorio.RepositorioReceta;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Scanner;
+
 import javax.sql.DataSource;
 
 
@@ -24,7 +28,6 @@ public class FoodhelpBackendApplication {
 	public CommandLineRunner pruebaPrimeraConexion() {
 		return args -> {
 			System.out.println(probarConexionSQL());
-
 			System.out.println(" prueba recetas ");
 
 			try{
@@ -41,7 +44,34 @@ public class FoodhelpBackendApplication {
 			}catch (Exception e){
 				System.out.println("Error al obtener recetas: " + e.getMessage());
 			}
+			pruebaBusquedaPorNombre();
 		};
+	}
+
+	private void pruebaBusquedaPorNombre() {
+
+		System.out.println("Prueba de busqueda por nombre :");
+
+
+		try (Scanner scanner = new Scanner(System.in)) {
+			System.out.print("ingresa el nombre de la receta a buscar ");
+			String nombrebusqueda = scanner.nextLine();
+
+			System.out.println(" Ejecutando busqueda por termino: '" + nombrebusqueda );
+
+			List<Receta> recetasEncontradas = controladorReceta.buscarRecetasPorNombre(nombrebusqueda);
+
+			if (recetasEncontradas.isEmpty()) {
+				System.out.println("No se encontraron recetas.");
+			} else {
+				System.out.println("Busqueda exitosa: Se encontraron " + recetasEncontradas.size() + " recetas.");
+				recetasEncontradas.forEach(receta -> {
+					System.out.println("  Resultado :  ID: " + receta.getId() + ", Nombre: " + receta.getNombre() + ", Descripcion" + receta.getDescripcion() );
+				});
+			}
+		} catch (Exception e) {
+			System.err.println("Error al realizar la busqueda: " + e.getMessage());
+		}
 	}
 
 	@Autowired
@@ -49,6 +79,9 @@ public class FoodhelpBackendApplication {
 
 	@Autowired
 	private RepositorioReceta repositorioReceta;
+
+	@Autowired
+	private ControladorReceta controladorReceta;
 
 
 
