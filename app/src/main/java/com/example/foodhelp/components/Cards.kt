@@ -65,6 +65,29 @@ fun HomeCard(
     }
 }
 
+@Composable
+fun RecipeListCard(
+    modifier: Modifier = Modifier
+){
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = SelectedToggle,
+            contentColor = ColorButton
+        ),
+        modifier = modifier
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+
+        }
+    }
+}
+
 private const val INGR_POR_ROW = 3
 @Composable
 fun IngredientsCard(

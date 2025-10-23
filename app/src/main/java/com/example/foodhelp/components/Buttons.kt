@@ -1,5 +1,6 @@
 package com.example.foodhelp.components
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -10,6 +11,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonColors
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -75,5 +77,30 @@ fun IngredientButton(
         shape = RoundedCornerShape(40.dp)
     ) {
         Text(text)
+    }
+}
+
+@Composable
+fun ButtonRecipe(
+    onClick: () -> Unit,
+    recipeName: String,
+    ingredientList: List<String>,
+    modifier: Modifier = Modifier
+){
+    Button(
+        onClick = onClick,
+        modifier = modifier,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = ComponentAccent,
+            contentColor = ColorButton
+        ),
+        shape = RoundedCornerShape(10.dp)
+    ) {
+        Column(
+            modifier = Modifier,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(recipeName)
+        }
     }
 }
