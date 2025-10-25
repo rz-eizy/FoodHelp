@@ -15,4 +15,22 @@ interface RecetaApiService {
 
     @GET("api/recetas")
     suspend fun obtenerTodasLasRecetas(): List<Receta>
+
+    @GET("api/recetas/por-categoria")
+    suspend fun buscarRecetasPorCategoria(
+        @Query("categoria") nombreCategoria: String
+    ): List<Receta>
+
+
+    @GET("api/recetas/por-ingrediente/or")
+    suspend fun buscarPorCualquierIngrediente(
+        // se le enviar una lista de ingredientes y te devuelve una lista
+        // de recetas que contengan al menos uno de los ingredientes
+        @Query("ingredientes") ingredientes: List<String>
+    ): List<Receta>
+
+    @GET("api/recetas/por-ingrediente/and")
+    suspend fun buscarPorTodosLosIngredientes(
+        @Query("ingredientes") ingredientes: List<String>
+    ): List<Receta>
 }
