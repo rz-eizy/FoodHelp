@@ -25,7 +25,22 @@ dependencies {
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
+sonar {
+	properties {
+		property("sonar.java.binaries",
+			// Mantenemos la sintaxis simple y compatible:
+			"${project.buildDir}/classes/java/main,${project.buildDir}/resources/main"
+		)
 
+		// Rutas de código fuente y pruebas
+		property("sonar.sources", "src/main/java")
+		property("sonar.tests", "src/test/java")
+	}
+}
 tasks.withType<Test> {
 	useJUnitPlatform()
+}
+
+tasks.named("sonar").configure {
+	dependsOn(tasks.named("compileJava"), tasks.named("processResources"))
 }
