@@ -19,7 +19,5 @@ local.properties
 /.idea/misc.xml
 /.idea/vcs.xml
 local.properties
+.idea/deploymentTargetSelector.xml
 
->>>>>>> Stashed changes
-
-/.idea/deploymentTargetSelector.xml
