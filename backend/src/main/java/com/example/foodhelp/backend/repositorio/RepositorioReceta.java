@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface RepositorioReceta extends JpaRepository<Receta, Long> {
@@ -28,6 +29,8 @@ public interface RepositorioReceta extends JpaRepository<Receta, Long> {
             @Param("nombres") List<String> nombres,
             @Param("cantidad") Long cantidad
     );
+
+    Optional<Receta> findByNombreIgnoreCase(String nombreExacto);
 
 
 

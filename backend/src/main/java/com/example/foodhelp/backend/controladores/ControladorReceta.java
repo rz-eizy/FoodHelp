@@ -4,6 +4,8 @@ package com.example.foodhelp.backend.controladores;
 import com.example.foodhelp.backend.entidades.Receta;
 import com.example.foodhelp.backend.repositorio.RepositorioReceta;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -11,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @RestController
@@ -66,6 +69,20 @@ public class ControladorReceta {
         long cantidad = (long) ingredientesLowerUnicos.size();
 
         return repositorioReceta.findByTodosLosIngredientesEnLista(ingredientesLowerUnicos, cantidad);
+    }
+
+    @GetMapping("/buscar-exacto")
+    public ResponseEntity<String> buscarRecetaPorNombreExacto(@RequestParam String nombre) {
+
+        Optional<Receta> recetaOpcional = repositorioReceta.findByNombreIgnoreCase(nombre);
+
+        if (recetaOpcional.isPresent()) {
+            Receta recetaEncontrada = recetaOpcional.get();
+            return ResponseEntity.ok(recetaEncontrada.toString());
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("No se encontro ninguna receta con el nombre : " + nombre);
+        }
     }
 
 

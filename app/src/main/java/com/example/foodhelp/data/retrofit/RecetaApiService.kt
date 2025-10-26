@@ -3,6 +3,7 @@ package com.example.foodhelp.data.retrofit
 import com.example.foodhelp.data.Receta
 import retrofit2.http.GET
 import retrofit2.http.Query
+import retrofit2.Response
 
 // clase encargada de hacer las llamadas a springbot
 
@@ -33,4 +34,9 @@ interface RecetaApiService {
     suspend fun buscarPorTodosLosIngredientes(
         @Query("ingredientes") ingredientes: List<String>
     ): List<Receta>
+
+    @GET("api/recetas/buscar-exacto")
+    suspend fun buscarRecetaPorNombreExacto(
+        @Query("nombre") nombre: String
+    ): Response<String>
 }
