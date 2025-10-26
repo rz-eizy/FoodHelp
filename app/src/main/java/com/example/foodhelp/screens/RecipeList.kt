@@ -15,17 +15,15 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import com.example.foodhelp.components.HomeButton
 import com.example.foodhelp.components.RecipeListCard
 import com.example.foodhelp.ui.theme.AppBackground
-import com.example.foodhelp.ui.theme.MyApplicationTheme
-import com.example.foodhelp.ui.theme.SurfaceBackground
 
 @Composable
-fun RecipeList(){
+fun RecipeListScreen(navController: NavController){
     Scaffold(
         topBar = {
             Row(
@@ -74,13 +72,5 @@ fun RecipeList(){
                     .height(650.dp)
             )
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun PreviewRecpList(){
-    MyApplicationTheme {
-        RecipeList()
     }
 }
