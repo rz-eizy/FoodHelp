@@ -6,7 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
-import com.example.foodhelp.screens.HomePage
+import com.example.foodhelp.navigation.AppNavigation
 import com.example.foodhelp.ui.theme.MyApplicationTheme
 
 class MainActivity : ComponentActivity() {
@@ -15,21 +15,15 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             MyApplicationTheme {
-                Index()
+                AppNavigation()
             }
         }
     }
 }
-
-@Composable
-fun Index() {
-    HomePage()
-}
-
 @Preview(showBackground = true)
 @Composable
 fun GreetingPreview() {
     MyApplicationTheme {
-        Index()
+        AppNavigation()
     }
 }

@@ -15,18 +15,17 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import com.example.foodhelp.components.IngredientsCard
 import com.example.foodhelp.components.MySearchBar
 import com.example.foodhelp.components.MySegmentedButton
 import com.example.foodhelp.components.NextButton
 import com.example.foodhelp.ui.theme.AppBackground
-import com.example.foodhelp.ui.theme.MyApplicationTheme
 import com.example.foodhelp.ui.theme.SurfaceBackground
 
 @Composable
-fun SearchIngredients(){
+fun IngredientScreen(navController: NavController){
     val testIngredients = listOf(
         "Queso",
         "Huevo",
@@ -90,13 +89,5 @@ fun SearchIngredients(){
             }
         }
 
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun PreviewIngredients(){
-    MyApplicationTheme {
-        SearchIngredients()
     }
 }

@@ -12,17 +12,16 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import com.example.foodhelp.components.HomeButton
 import com.example.foodhelp.components.RecipeContent
 import com.example.foodhelp.components.RecipeHeader
 import com.example.foodhelp.ui.theme.AppBackground
-import com.example.foodhelp.ui.theme.MyApplicationTheme
 import com.example.foodhelp.ui.theme.SurfaceBackground
 
 @Composable
-fun RecipePage(){
+fun RecipeScreen(navController: NavController){
     val nombre = "Nombre de receta"
     val description = "Esto es una descripción"
     Scaffold(
@@ -69,13 +68,5 @@ fun RecipePage(){
                 description
             ) }
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun PreviewRecipe(){
-    MyApplicationTheme { 
-        RecipePage()
     }
 }
