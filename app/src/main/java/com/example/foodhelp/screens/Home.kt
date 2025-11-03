@@ -19,7 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.foodhelp.components.HomeCard
 import com.example.foodhelp.components.MySearchBar
-import com.example.foodhelp.components.MySegmentedButton
+import com.example.foodhelp.components.HomeSegmentedButton
 import com.example.foodhelp.ui.theme.SurfaceBackground
 
 @Composable
@@ -41,7 +41,7 @@ fun HomeScreen(navController: NavController){
                     .background(SurfaceBackground),
                 contentAlignment = Alignment.Center
             ) {
-                MySegmentedButton(
+                HomeSegmentedButton(
                     modifier = Modifier
                         .background(SurfaceBackground)
                         .windowInsetsPadding(WindowInsets.navigationBars)
