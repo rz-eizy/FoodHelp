@@ -2,7 +2,6 @@ package com.example.foodhelp.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -33,18 +32,7 @@ fun RecipeCard(
         ),
         modifier = modifier
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text(
-                text = description,
-                textAlign = TextAlign.Center
-            )
-        }
+        RecipeCardContent(description)
     }
 }
 
@@ -59,7 +47,7 @@ fun HomeCard(
         ),
         modifier = modifier
     ) {
-        Category(
+        HomeCategory(
             modifier = Modifier
         )
     }
@@ -102,27 +90,11 @@ fun IngredientsCard(
         ),
         modifier = modifier
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            ingredientList.chunked(INGR_POR_ROW).forEach { rowIngredients ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    rowIngredients.forEach { ingredientName ->
-                        IngredientButton(
-                            text = ingredientName,
-                            modifier = Modifier,
-                            onRemoveClick = {onRemoveIngredient(ingredientName)}
-                        )
-                    }
-                }
-            }
-        }
+        IngredientCardContent(
+            ingredientList,
+            onRemoveIngredient,
+            INGR_POR_ROW
+        )
     }
 }
 
