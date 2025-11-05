@@ -1,7 +1,12 @@
 package com.example.foodhelp.backend.entidades;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
+
 @Entity
+@Getter
+@Setter
 @Table(name = "ingrediente")
 public class Ingrediente {
 
