@@ -1,6 +1,4 @@
 package com.example.foodhelp.backend.entidades;
-
-
 import java.util.Set;
 import jakarta.persistence.*;
 import lombok.Getter;

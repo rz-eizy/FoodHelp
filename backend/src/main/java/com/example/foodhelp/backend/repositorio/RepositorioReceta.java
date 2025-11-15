@@ -32,7 +32,4 @@ public interface RepositorioReceta extends JpaRepository<Receta, Long> {
 
     Optional<Receta> findByNombreIgnoreCase(String nombreExacto);
 
-
-
-
 }
