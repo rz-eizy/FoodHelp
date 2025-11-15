@@ -1,5 +1,6 @@
 package com.example.foodhelp.backend;
 import com.example.foodhelp.backend.controladores.ControladorReceta;
+import com.example.foodhelp.backend.dto.RespuestaReceta;
 import com.example.foodhelp.backend.entidades.Receta;
 import com.example.foodhelp.backend.repositorio.RepositorioReceta;
 import org.junit.jupiter.api.Test;
@@ -53,7 +54,7 @@ class FoodhelpBackendApplicationTests {
 		System.out.println("Prueba Buscar Recetas Por Nombre");
 		String nombreBusqueda = "pollo";
 		System.out.println("Ejecutando busqueda por nombre: '" + nombreBusqueda + "'");
-		List<Receta> recetasEncontradas = controladorReceta.buscarRecetasPorNombre(nombreBusqueda);
+		List<RespuestaReceta> recetasEncontradas = controladorReceta.buscarRecetasPorNombre(nombreBusqueda);
 		assertThat(recetasEncontradas).isNotNull();
 		if (recetasEncontradas.isEmpty()) {
 			System.out.println("No se encontraron recetas con ese nombre");
@@ -68,7 +69,7 @@ class FoodhelpBackendApplicationTests {
 		System.out.println("Prueba busqueda de categoria");
 		String categoriaBusqueda = "FRITURAS";
 		System.out.println("Ejecutando busqueda por categoria: '" + categoriaBusqueda + "'");
-		List<Receta> recetasEncontradas = controladorReceta.buscarRecetasPorCategoria(categoriaBusqueda);
+		List<RespuestaReceta> recetasEncontradas = controladorReceta.buscarRecetasPorCategoria(categoriaBusqueda);
 		assertThat(recetasEncontradas).isNotNull();
 		if (recetasEncontradas.isEmpty()) {
 			System.out.println("No se encontraron recetas en la categoria");
@@ -85,7 +86,7 @@ class FoodhelpBackendApplicationTests {
 		System.out.println("Prueba busqueda 'O' por ingredientes");
 		List<String> ingredientesBusqueda = List.of("huevo", "choclo");
 		System.out.println("Ejecutando busqueda por ingredientes: '" + ingredientesBusqueda + "'");
-		List<Receta> recetasEncontradas = controladorReceta.buscarPorCualquierIngrediente(ingredientesBusqueda);
+		List<RespuestaReceta> recetasEncontradas = controladorReceta.buscarPorCualquierIngrediente(ingredientesBusqueda);
 		assertThat(recetasEncontradas).isNotNull();
 		if (recetasEncontradas.isEmpty()) {
 			System.out.println("No se encontraron recetas con esos ingredientes.");
@@ -102,7 +103,7 @@ class FoodhelpBackendApplicationTests {
 		System.out.println("Prueba busqueda 'Y' por ingredientes");
 		List<String> ingredientesBusqueda = List.of("Carne Molida", "Cebolla");
 		System.out.println("Ejecutando busqueda por ingredientes: '" + ingredientesBusqueda + "'");
-		List<Receta> recetasEncontradas = controladorReceta.buscarPorTodosLosIngredientes(ingredientesBusqueda);
+		List<RespuestaReceta> recetasEncontradas = controladorReceta.buscarPorTodosLosIngredientes(ingredientesBusqueda);
 		assertThat(recetasEncontradas).isNotNull();
 		if (recetasEncontradas.isEmpty()) {
 			System.out.println("No se encontraron recetas con todos esos ingredientes.");
