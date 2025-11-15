@@ -6,6 +6,9 @@ import com.example.foodhelp.backend.repositorio.RepositorioReceta;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import java.sql.Connection;
 import java.util.List;
@@ -47,6 +50,21 @@ class FoodhelpBackendApplicationTests {
 			recetas.forEach(receta -> System.out.println
 					("  -> " + receta.getNombre()));
 		}
+	}
+
+	@Test
+	void pruebaBuscarRecetaPorIdEncontrado() {
+		System.out.println("Prueba busqueda por ID (exito)");
+		// IMPORTANTE siempre hay que colocar un " idL" en vez de solo el id
+		// para indicar que es un long y no un int IMPORTANTEEEE AAAAAAAAAA
+		Long idBusqueda = 1L;
+		System.out.println("Ejecutando busqueda por ID: " + idBusqueda);
+		ResponseEntity<RespuestaReceta> respuesta = controladorReceta.buscarRecetaPorId(idBusqueda);
+		assertThat(respuesta.getStatusCode()).isEqualTo(HttpStatus.OK);
+		assertThat(respuesta.getBody()).isNotNull();
+		assertThat(respuesta.getBody().getId()).isEqualTo(idBusqueda);
+
+		System.out.println("Busqueda exitosa. Receta encontrada: " + respuesta.getBody().getNombre());
 	}
 
 	@Test
@@ -113,5 +131,25 @@ class FoodhelpBackendApplicationTests {
 				System.out.println("  -> ID: " + receta.getId() + ", Nombre: " + receta.getNombre());
 			});
 		}
+	}
+
+	@Test
+	void pruebaBuscarRecetaPorNombreExactoEncontrado() {
+		System.out.println("Prueba busqueda exacta por nombre (exito)");
+		String nombreExacto = "Pastel de Choclo";
+		System.out.println("Ejecutando busqueda exacta por: '" + nombreExacto + "'");
+		ResponseEntity<RespuestaReceta> respuesta = controladorReceta.buscarRecetaPorNombreExacto(nombreExacto);
+		assertThat(respuesta.getStatusCode()).isEqualTo(HttpStatus.OK);
+		assertThat(respuesta.getBody()).isNotNull();
+		RespuestaReceta recetaEncontrada = respuesta.getBody();
+
+		System.out.println("Busqueda exitosa. Detalles de la receta encontrada:");
+		System.out.println("   ID: " + recetaEncontrada.getId());
+		System.out.println("   Nombre: " + recetaEncontrada.getNombre());
+		System.out.println("   Descripcion: " + recetaEncontrada.getDescripcion());
+		System.out.println("   Categoria: " + recetaEncontrada.getCategoriaNombre());
+		System.out.println("   Tiempo: " + recetaEncontrada.getTiempoPreparacion() + " min");
+		System.out.println("   Imagen URL: " + recetaEncontrada.getImagenUrl());
+		System.out.println("   Ingredientes: " + recetaEncontrada.getIngredientes());
 	}
 }

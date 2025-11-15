@@ -27,6 +27,11 @@ public class ServicioReceta {
                 .collect(Collectors.toList());
     }
 
+    public Optional<RespuestaReceta> buscarPorId(Long id) {
+        return repositorioReceta.findById(id)
+                .map(RespuestaReceta::new);
+    }
+
     public List<RespuestaReceta> buscarRecetasPorNombre(String nombre) {
         return repositorioReceta.findByNombreContainingIgnoreCase(nombre).stream()
                 .map(RespuestaReceta::new)

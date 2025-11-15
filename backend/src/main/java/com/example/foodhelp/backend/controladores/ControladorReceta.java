@@ -3,6 +3,7 @@ import com.example.foodhelp.backend.dto.RespuestaReceta;
 import com.example.foodhelp.backend.servicios.ServicioReceta;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -22,6 +23,14 @@ public class ControladorReceta {
     public List<RespuestaReceta> obtenerTodasLasRecetas() {
         return servicioReceta.obtenerTodasLasRecetas();
     }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<RespuestaReceta> buscarRecetaPorId(@PathVariable Long id) {
+        return servicioReceta.buscarPorId(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
 
     @GetMapping("/buscar")
     public List<RespuestaReceta> buscarRecetasPorNombre(@RequestParam String nombre) {
