@@ -21,7 +21,7 @@ import com.example.foodhelp.ui.theme.AppBackground
 import com.example.foodhelp.ui.theme.SurfaceBackground
 
 @Composable
-fun RecipeScreen(navController: NavController){
+fun RecipeScreen(navController: NavController, recetaId: Long){
     val nombre = "Nombre de receta"
     val description = "Esto es una descripción"
     Scaffold(
