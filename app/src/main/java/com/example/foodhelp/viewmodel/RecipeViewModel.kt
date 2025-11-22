@@ -24,12 +24,12 @@ class RecipeViewModel @Inject constructor(
         // Implementar mas validaciónes para la busqueda.
 
         val trimmedQury = query.trim() // Limpiamos espacios Inicio/Final
-        if (query.isBlank()){
+        if (trimmedQury.isBlank()){
             _uiState.update {
                 it.copy(
                     errorMessage = "La busqueda no puede estar vacia",
                     recetasEncontradas = emptyList(),
-                    query = query,
+                    query = trimmedQury,
                     isLoading = false
                 )
             }
@@ -42,12 +42,12 @@ class RecipeViewModel @Inject constructor(
                     it.copy(
                         isLoading = true,
                         errorMessage = null,
-                        query = query,
+                        query = trimmedQury,
                         navigateToRecipeId = null
                     )
                 }
 
-                val resultados = repository.fin dRecipeByName(query)
+                val resultados = repository.findRecipeByName(trimmedQury)
                 _uiState.update {
                     it.copy(
                         recetasEncontradas = resultados,
@@ -66,7 +66,11 @@ class RecipeViewModel @Inject constructor(
             }
         }
     }
-
+    fun onErrorHandled(){
+        _uiState.update { currentState ->
+            currentState.copy(errorMessage = null)
+        }
+    }
     fun onNavigationHandled(){
         _uiState.update {
             it.copy(navigateToRecipeId = null)

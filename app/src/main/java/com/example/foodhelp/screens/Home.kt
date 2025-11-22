@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.example.foodhelp.components.AlertDialogExample
 import com.example.foodhelp.components.HomeCard
 import com.example.foodhelp.components.MySearchBar
 import com.example.foodhelp.components.HomeSegmentedButton
@@ -69,7 +70,13 @@ fun HomeScreen(
         if (uiState.isLoading) {
             // Agregar una nota con la carga.
         } else if (uiState.errorMessage != null){
-            // Mostrar mensaje de error.
+            AlertDialogExample(
+                onConfirmation = {
+                    viewModel.onErrorHandled()
+                },
+                dialogTitle = "ERROR",
+                dialogText = uiState.errorMessage!!
+            )
         }
         Column(
             modifier = Modifier
