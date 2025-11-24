@@ -4,6 +4,9 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.navigation.compose.rememberNavController
 import com.example.foodhelp.navigation.AppNavigation
 import com.example.foodhelp.ui.theme.MyApplicationTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -15,7 +18,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             MyApplicationTheme {
-                AppNavigation()
+                val navController = rememberNavController()
+                AppNavigation(navController)
             }
         }
     }
