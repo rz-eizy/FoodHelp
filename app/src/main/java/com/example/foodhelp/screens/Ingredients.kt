@@ -19,7 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.foodhelp.components.IngredientsCard
 import com.example.foodhelp.components.MySearchBar
-import com.example.foodhelp.components.MySegmentedButton
+import com.example.foodhelp.components.HomeSegmentedButton
 import com.example.foodhelp.components.NextButton
 import com.example.foodhelp.ui.theme.AppBackground
 import com.example.foodhelp.ui.theme.SurfaceBackground
@@ -52,7 +52,7 @@ fun IngredientScreen(navController: NavController){
                     .fillMaxWidth(),
                 contentAlignment = Alignment.Center
             ){
-                MySegmentedButton(
+                HomeSegmentedButton(
                     modifier = Modifier
                         .background(SurfaceBackground)
                         .windowInsetsPadding(WindowInsets.navigationBars)

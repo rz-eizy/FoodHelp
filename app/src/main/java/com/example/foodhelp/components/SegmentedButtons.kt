@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
@@ -20,18 +19,15 @@ import com.example.foodhelp.ui.theme.ColorButton
 import com.example.foodhelp.ui.theme.ComponentAccent
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.foodhelp.ui.theme.MyApplicationTheme
-import com.example.foodhelp.ui.theme.SelectedToggle
 
 @Composable
-fun MySegmentedButton(
+fun HomeSegmentedButton(
     modifier: Modifier = Modifier
 ){
     var selectedIndex by remember { mutableIntStateOf(0) }
     val options = listOf(Icons.Filled.Home to "Inicio", Icons.Filled.Search to "Busqueda")
-    // Implementar dentro de  build.gradle.kts(Module :app)
     SingleChoiceSegmentedButtonRow(modifier = modifier) {
         options.forEachIndexed { index, (icon, description) ->
             SegmentedButton(
@@ -107,6 +103,6 @@ fun SaveAndIngredients(
 @Composable
 fun ButtonPreview(){
     MyApplicationTheme {
-        MySegmentedButton()
+        HomeSegmentedButton()
     }
 }
