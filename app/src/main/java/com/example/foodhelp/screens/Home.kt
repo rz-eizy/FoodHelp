@@ -12,24 +12,39 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.Scaffold
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.example.foodhelp.components.AlertDialogExample
 import com.example.foodhelp.components.HomeCard
 import com.example.foodhelp.components.MySearchBar
 import com.example.foodhelp.components.HomeSegmentedButton
 import com.example.foodhelp.navigation.AppScreens
 import com.example.foodhelp.ui.theme.SurfaceBackground
+import com.example.foodhelp.viewmodel.RecipeViewModel
 
 @Composable
-fun HomeScreen(navController: NavController){
+fun HomeScreen(
+    navController: NavController,
+    viewModel: RecipeViewModel = hiltViewModel()
+){
+    val uiState by viewModel.uiState.collectAsState()
+    LaunchedEffect(uiState.navigateToRecipeId) {
+        val recipeId = uiState.navigateToRecipeId
+        if (recipeId != null && recipeId > 0){
+            navController.navigate(AppScreens.RecipeScreen.createRoute(recipeId))
+            viewModel.onNavigationHandled()
+        }
+    }
+
     Scaffold(
         topBar = {
             MySearchBar(
-                onSearch = { query ->
-                    navController.navigate(AppScreens.RecipeScreen.route)
+                onSearch = {query ->
+                    viewModel.buscarRecetas(query)
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -52,6 +67,17 @@ fun HomeScreen(navController: NavController){
             }
         }
     ) { innerPadding ->
+        if (uiState.isLoading) {
+            // Agregar una nota con la carga.
+        } else if (uiState.errorMessage != null){
+            AlertDialogExample(
+                onConfirmation = {
+                    viewModel.onErrorHandled()
+                },
+                dialogTitle = "ERROR",
+                dialogText = uiState.errorMessage!!
+            )
+        }
         Column(
             modifier = Modifier
                 .fillMaxSize()

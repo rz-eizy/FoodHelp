@@ -9,7 +9,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.compose.rememberNavController
 import com.example.foodhelp.navigation.AppNavigation
 import com.example.foodhelp.ui.theme.MyApplicationTheme
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -20,12 +22,5 @@ class MainActivity : ComponentActivity() {
                 AppNavigation(navController)
             }
         }
-    }
-}
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    MyApplicationTheme {
-        AppNavigation()
     }
 }
