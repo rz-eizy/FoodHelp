@@ -1,9 +1,12 @@
 package com.example.foodhelp.viewmodel
 
+import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.foodhelp.repository.RecetaRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,15 +18,14 @@ import javax.inject.Inject
 class RecipeViewModel @Inject constructor(
     private val repository: RecetaRepository
 ) : ViewModel() {
-    // Actualiza el estado internamente
+    @VisibleForTesting
+    internal var dispatcher: CoroutineDispatcher = Dispatchers.IO
+
     private val _uiState = MutableStateFlow(RecetaUiState())
-    // Publico para que pueda ser observado por la UI
     val uiState: StateFlow<RecetaUiState> = _uiState.asStateFlow()
 
     fun buscarRecetas(query: String) {
-        // Implementar mas validaciónes para la busqueda.
-
-        val trimmedQury = query.trim() // Limpiamos espacios Inicio/Final
+        val trimmedQury = query.trim()
         if (trimmedQury.isBlank()){
             _uiState.update {
                 it.copy(
@@ -35,8 +37,7 @@ class RecipeViewModel @Inject constructor(
             }
             return
         }
-
-        viewModelScope.launch {
+        viewModelScope.launch(dispatcher) {
             try {
                 _uiState.update {
                     it.copy(
