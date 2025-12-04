@@ -9,6 +9,7 @@ import androidx.navigation.navArgument
 import androidx.navigation.NavType
 import com.example.foodhelp.screens.HomeScreen
 import com.example.foodhelp.screens.IngredientScreen
+import com.example.foodhelp.screens.Recipe
 import com.example.foodhelp.screens.RecipeListScreen
 import com.example.foodhelp.screens.RecipeScreen
 

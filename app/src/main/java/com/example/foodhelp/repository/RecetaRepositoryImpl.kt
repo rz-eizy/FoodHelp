@@ -10,4 +10,8 @@ class RecetaRepositoryImpl @Inject constructor(
     override suspend fun findRecipeByName(query: String): List<Receta> {
         return apiService.buscarRecetas(query)
     }
+
+    override suspend fun findByCategory(query: String): List<Receta> {
+        return apiService.buscarRecetasPorCategoria(query)
+    }
 }

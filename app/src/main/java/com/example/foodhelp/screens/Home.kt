@@ -26,6 +26,7 @@ import com.example.foodhelp.navigation.AppScreens
 import com.example.foodhelp.ui.theme.SurfaceBackground
 import com.example.foodhelp.viewmodel.RecipeViewModel
 
+private const val RECIPE_LIST_NAV_ID = 1L
 @Composable
 fun HomeScreen(
     navController: NavController,
@@ -35,6 +36,11 @@ fun HomeScreen(
     LaunchedEffect(uiState.navigateToRecipeId) {
         val recipeId = uiState.navigateToRecipeId
         if (recipeId != null && recipeId > 0){
+            when (recipeId){
+                RECIPE_LIST_NAV_ID -> {
+                    navController.navigate(AppScreens.RecListScreen.route)
+                }
+            }
             navController.navigate(AppScreens.RecipeScreen.createRoute(recipeId))
             viewModel.onNavigationHandled()
         }
@@ -68,7 +74,9 @@ fun HomeScreen(
         }
     ) { innerPadding ->
         if (uiState.isLoading) {
-            // Agregar una nota con la carga.
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center){
+
+            }
         } else if (uiState.errorMessage != null){
             AlertDialogExample(
                 onConfirmation = {
@@ -91,11 +99,13 @@ fun HomeScreen(
                 contentAlignment = Alignment.Center
             ){
                 HomeCard(
+                    onCategoryClick = { category ->
+                        viewModel.findRecipeByCategory(category)
+                    },
                     modifier = Modifier
                         .size(height = 550.dp, width = 325.dp)
                 )
             }
         }
     }
-
 }

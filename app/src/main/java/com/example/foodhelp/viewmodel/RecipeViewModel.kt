@@ -67,6 +67,42 @@ class RecipeViewModel @Inject constructor(
             }
         }
     }
+
+    fun findRecipeByCategory(categoria: String) = viewModelScope.launch {
+        _uiState.update { it
+            .copy(isLoading = true, errorMessage = null)
+        }
+
+        if (categoria.isBlank()) {
+            _uiState.update { it.copy(errorMessage = "La categoría no puede estar vacía.", isLoading = false) }
+            return@launch
+        }
+
+        try {
+            val recetasEncontradas = repository.findByCategory(categoria)
+
+            if (recetasEncontradas.isEmpty()) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        errorMessage = "No se encontraron recetas para la categoría: $categoria."
+                    )
+                }
+            } else {
+                _uiState.update {
+                    it.copy(
+                        recetasEncontradas = recetasEncontradas,
+                        isLoading = false,
+                        navigateToRecipeId = RECIPE_LIST_NAV_ID
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            _uiState.update { it.copy(isLoading = false, errorMessage = "Error de red al buscar categorías.") }
+        }
+    }
+    private val RECIPE_LIST_NAV_ID = 1L
+
     fun onErrorHandled(){
         _uiState.update { currentState ->
             currentState.copy(errorMessage = null)
