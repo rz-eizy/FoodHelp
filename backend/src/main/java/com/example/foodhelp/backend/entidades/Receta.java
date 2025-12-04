@@ -13,6 +13,7 @@ public class Receta {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String nombre;
+    @Column(columnDefinition = "TEXT")
     private String descripcion;
 
     @Column(name = "tiempo_preparacion")
@@ -21,6 +22,7 @@ public class Receta {
     @Column(name = "imagen_url")
     private String imagenUrl;
 
+    @Column(columnDefinition = "TEXT")
     private String instrucciones;
 
     @OneToMany(mappedBy = "receta",cascade = CascadeType.ALL, fetch = FetchType.EAGER)
