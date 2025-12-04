@@ -1,22 +1,15 @@
 package com.example.foodhelp.components
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.example.foodhelp.ui.theme.ColorButton
 import com.example.foodhelp.ui.theme.ComponentAccent
 import com.example.foodhelp.ui.theme.MyApplicationTheme
 import com.example.foodhelp.ui.theme.SelectedToggle
 import com.example.foodhelp.ui.theme.SurfaceBackground
-import com.example.foodhelp.data.Receta
 
 @Composable
 fun RecipeCard(
@@ -50,31 +43,6 @@ fun HomeCard(
             onCategoryClick = onCategoryClick,
             modifier = Modifier
         )
-    }
-}
-
-@Composable
-fun RecipeListCard(
-    modifier: Modifier = Modifier,
-    recipes: List<Receta>,
-    onRecipeClick: (Long) -> Unit
-){
-    Card(
-        colors = CardDefaults.cardColors(
-            containerColor = SelectedToggle,
-            contentColor = ColorButton
-        ),
-        modifier = modifier.fillMaxWidth(0.9f)
-    ) {
-        Column(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            RecipeList(recipes, onRecipeClick)
-        }
     }
 }
 
