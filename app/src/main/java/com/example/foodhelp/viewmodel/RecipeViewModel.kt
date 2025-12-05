@@ -98,7 +98,7 @@ class RecipeViewModel @Inject constructor(
                 }
             }
         } catch (e: Exception) {
-            _uiState.update { it.copy(isLoading = false, errorMessage = "Error de red al buscar categorías.") }
+            _uiState.update { it.copy(isLoading = false, errorMessage = "Error: ${e.message}.") }
         }
     }
     private val RECIPE_LIST_NAV_ID = 1L
