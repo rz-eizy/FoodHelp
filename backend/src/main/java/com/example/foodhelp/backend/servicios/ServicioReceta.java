@@ -12,9 +12,11 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ServicioReceta {
 
     private final RepositorioReceta repositorioReceta;
@@ -33,15 +35,22 @@ public class ServicioReceta {
     }
 
     public List<RespuestaReceta> buscarRecetasPorNombre(String nombre) {
-        return repositorioReceta.findByNombreContainingIgnoreCase(nombre).stream()
+        log.info("ENTRADA: Busqueda de receta solicitada por NOMBRE: '{}'", nombre);
+        List<RespuestaReceta> listaResultado = repositorioReceta.findByNombreContainingIgnoreCase(nombre).stream()
                 .map(RespuestaReceta::new)
                 .collect(Collectors.toList());
+        log.info("SALIDA: Busqueda finalizada. Se encontraron {} recetas. RECETAS: {}", listaResultado.size(), listaResultado);
+        return listaResultado;
+
     }
 
     public List<RespuestaReceta> buscarRecetasPorCategoria(String categoria) {
-        return repositorioReceta.findByCategoriaNombreContainingIgnoreCase(categoria).stream()
+        log.info("ENTRADA: Busqueda de receta solicitada por CATEGORIA: '{}'", categoria);
+        List<RespuestaReceta> listaResultado = repositorioReceta.findByCategoriaNombreContainingIgnoreCase(categoria).stream()
                 .map(RespuestaReceta::new)
                 .collect(Collectors.toList());
+        log.info("SALIDA: Busqueda finalizada. Se encontraron {} recetas. RECETAS: {}", listaResultado.size(), listaResultado);
+        return listaResultado;
     }
 
     public List<RespuestaReceta> buscarPorCualquierIngrediente(List<String> ingredientes) {
