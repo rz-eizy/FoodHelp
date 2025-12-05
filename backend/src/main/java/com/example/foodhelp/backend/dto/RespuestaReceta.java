@@ -1,4 +1,5 @@
 package com.example.foodhelp.backend.dto;
+import com.example.foodhelp.backend.entidades.Categoria;
 import com.example.foodhelp.backend.entidades.Receta;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -18,8 +19,8 @@ public class RespuestaReceta {
     private Integer tiempoPreparacion;
     private String imagenUrl;
     private String instrucciones;
-    private String categoriaNombre;
-    private Set<String> ingredientes;
+    private Categoria categoria;
+    private Set<Ingrediente> ingredientes;
 
     public RespuestaReceta(Receta receta) {
         this.id = receta.getId();
@@ -28,15 +29,7 @@ public class RespuestaReceta {
         this.tiempoPreparacion = receta.getTiempoPreparacion();
         this.imagenUrl = receta.getImagenUrl();
         this.instrucciones = receta.getInstrucciones();
-
-        if (receta.getCategoria() != null) {
-            this.categoriaNombre = receta.getCategoria().getNombre();
-        }
-
-        if (receta.getIngredientes() != null) {
-            this.ingredientes = receta.getIngredientes().stream()
-                    .map(Ingrediente::getNombre)
-                    .collect(Collectors.toSet());
-        }
+        this.categoria = receta.getCategoria();
+        this.ingredientes = receta.getIngredientes();
     }
 }

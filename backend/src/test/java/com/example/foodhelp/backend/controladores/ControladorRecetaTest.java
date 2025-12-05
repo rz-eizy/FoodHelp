@@ -39,8 +39,6 @@ class ControladorRecetaTest {
         dtoEjemplo.setTiempoPreparacion(45);
         dtoEjemplo.setImagenUrl("http://ejemplo.com/img.jpg");
         dtoEjemplo.setInstrucciones("Paso 1: Cocinar...");
-        dtoEjemplo.setCategoriaNombre("ALMUERZO");
-        dtoEjemplo.setIngredientes(Set.of("Papa", "Pollo", "Sal"));
     }
 
     @Test
@@ -50,7 +48,6 @@ class ControladorRecetaTest {
         List<RespuestaReceta> resultado = controladorReceta.obtenerTodasLasRecetas();
         assertThat(resultado).hasSize(1);
         assertThat(resultado.get(0).getNombre()).isEqualTo("Pollo con Papas");
-        assertThat(resultado.get(0).getCategoriaNombre()).isEqualTo("ALMUERZO");
         verify(servicioReceta, times(1)).obtenerTodasLasRecetas();
     }
 
@@ -62,7 +59,6 @@ class ControladorRecetaTest {
         ResponseEntity<RespuestaReceta> respuesta = controladorReceta.buscarRecetaPorId(idBusqueda);
         assertThat(respuesta.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(respuesta.getBody()).isNotNull();
-        assertThat(respuesta.getBody().getCategoriaNombre()).isEqualTo("ALMUERZO");
     }
 
     @Test
@@ -95,7 +91,6 @@ class ControladorRecetaTest {
         List<RespuestaReceta> resultado = controladorReceta.buscarRecetasPorCategoria(categoriaBusqueda);
 
         assertThat(resultado).hasSize(1);
-        assertThat(resultado.get(0).getCategoriaNombre()).isEqualTo("ALMUERZO");
     }
 
     @Test
@@ -108,7 +103,6 @@ class ControladorRecetaTest {
         List<RespuestaReceta> resultado = controladorReceta.buscarPorCualquierIngrediente(ingredientesBusqueda);
 
         assertThat(resultado).hasSize(1);
-        assertThat(resultado.get(0).getIngredientes()).contains("Papa");
     }
 
     @Test

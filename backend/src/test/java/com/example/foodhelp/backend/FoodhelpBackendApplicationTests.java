@@ -147,9 +147,7 @@ class FoodhelpBackendApplicationTests {
 		System.out.println("   ID: " + recetaEncontrada.getId());
 		System.out.println("   Nombre: " + recetaEncontrada.getNombre());
 		System.out.println("   Descripcion: " + recetaEncontrada.getDescripcion());
-		System.out.println("   Categoria: " + recetaEncontrada.getCategoriaNombre());
 		System.out.println("   Tiempo: " + recetaEncontrada.getTiempoPreparacion() + " min");
 		System.out.println("   Imagen URL: " + recetaEncontrada.getImagenUrl());
-		System.out.println("   Ingredientes: " + recetaEncontrada.getIngredientes());
 	}
 }

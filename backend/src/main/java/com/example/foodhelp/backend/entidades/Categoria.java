@@ -1,4 +1,6 @@
 package com.example.foodhelp.backend.entidades;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import java.util.Set;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -16,7 +18,8 @@ public class Categoria {
 
     private String nombre;
 
-    @OneToMany(mappedBy = "categoria", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "categoria")
+    @JsonIgnore
     private Set<Receta> recetas;
 
     public Categoria(){
