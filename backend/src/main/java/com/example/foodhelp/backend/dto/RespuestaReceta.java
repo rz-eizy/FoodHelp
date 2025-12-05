@@ -7,10 +7,12 @@ import com.example.foodhelp.backend.entidades.Ingrediente;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
 
 @Getter
 @Setter
 @NoArgsConstructor
+@ToString
 public class RespuestaReceta {
 
     private Long id;
