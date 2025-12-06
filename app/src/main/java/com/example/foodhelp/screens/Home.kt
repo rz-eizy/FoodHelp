@@ -26,7 +26,6 @@ import com.example.foodhelp.navigation.AppScreens
 import com.example.foodhelp.ui.theme.SurfaceBackground
 import com.example.foodhelp.viewmodel.RecipeViewModel
 
-private const val RECIPE_LIST_NAV_ID = 1L
 @Composable
 fun HomeScreen(
     navController: NavController,
@@ -36,11 +35,6 @@ fun HomeScreen(
     LaunchedEffect(uiState.navigateToRecipeId) {
         val recipeId = uiState.navigateToRecipeId
         if (recipeId != null && recipeId > 0){
-            when (recipeId){
-                RECIPE_LIST_NAV_ID -> {
-                    navController.navigate(AppScreens.RecListScreen.route)
-                }
-            }
             navController.navigate(AppScreens.RecipeScreen.createRoute(recipeId))
             viewModel.onNavigationHandled()
         }
@@ -100,7 +94,7 @@ fun HomeScreen(
             ){
                 HomeCard(
                     onCategoryClick = { category ->
-                        viewModel.findRecipeByCategory(category)
+                        navController.navigate(AppScreens.RecListScreen.createRoute(category))
                     },
                     modifier = Modifier
                         .size(height = 550.dp, width = 325.dp)

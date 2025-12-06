@@ -25,13 +25,13 @@ class RecipeViewModel @Inject constructor(
     val uiState: StateFlow<RecetaUiState> = _uiState.asStateFlow()
 
     fun buscarRecetas(query: String) {
-        val trimmedQury = query.trim()
-        if (trimmedQury.isBlank()){
+        val trimmedQuery = query.trim()
+        if (trimmedQuery.isBlank()){
             _uiState.update {
                 it.copy(
                     errorMessage = "La busqueda no puede estar vacia",
-                    recetasEncontradas = emptyList(),
-                    query = trimmedQury,
+                    recetas = emptyList(),
+                    query = trimmedQuery,
                     isLoading = false
                 )
             }
@@ -43,15 +43,15 @@ class RecipeViewModel @Inject constructor(
                     it.copy(
                         isLoading = true,
                         errorMessage = null,
-                        query = trimmedQury,
+                        query = trimmedQuery,
                         navigateToRecipeId = null
                     )
                 }
 
-                val resultados = repository.findRecipeByName(trimmedQury)
+                val resultados = repository.findRecipeByName(trimmedQuery)
                 _uiState.update {
                     it.copy(
-                        recetasEncontradas = resultados,
+                        recetas = resultados,
                         isLoading = false,
                         errorMessage = if (resultados.isEmpty()) "No se encontraron resultados." else null,
                         navigateToRecipeId = resultados.firstOrNull()?.id
@@ -70,7 +70,7 @@ class RecipeViewModel @Inject constructor(
 
     fun findRecipeByCategory(categoria: String) = viewModelScope.launch {
         _uiState.update { it
-            .copy(isLoading = true, errorMessage = null)
+            .copy(isLoading = true, errorMessage = null, navigateToRecipeId = null)
         }
 
         if (categoria.isBlank()) {
@@ -79,21 +79,20 @@ class RecipeViewModel @Inject constructor(
         }
 
         try {
-            val recetasEncontradas = repository.findByCategory(categoria)
-
-            if (recetasEncontradas.isEmpty()) {
+            val recetas = repository.findByCategory(categoria)
+            if (recetas.isEmpty()) {
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        errorMessage = "No se encontraron recetas para la categoría: $categoria."
+                        errorMessage = "No se encontraron recetas para la categoría: $categoria.",
+                        recetas = emptyList()
                     )
                 }
             } else {
-                _uiState.update {
-                    it.copy(
-                        recetasEncontradas = recetasEncontradas,
-                        isLoading = false,
-                        navigateToRecipeId = RECIPE_LIST_NAV_ID
+                _uiState.update { currentState ->
+                    currentState.copy(
+                        recetas = recetas,
+                        isLoading = false
                     )
                 }
             }
@@ -101,7 +100,6 @@ class RecipeViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = false, errorMessage = "Error: ${e.message}.") }
         }
     }
-    private val RECIPE_LIST_NAV_ID = 1L
 
     fun onErrorHandled(){
         _uiState.update { currentState ->

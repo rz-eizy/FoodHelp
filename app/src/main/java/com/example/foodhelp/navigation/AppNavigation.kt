@@ -32,8 +32,12 @@ fun AppNavigation(
         composable(route = AppScreens.IngredientScreen.route) {
             IngredientScreen(navController)
         }
-        composable(route = AppScreens.RecListScreen.route) {
-            RecipeListScreen(navController)
+        composable(
+            route = AppScreens.RecListScreen.route,
+            arguments = listOf(navArgument("categoria") { type = NavType.StringType})
+        ) { backStackEntry ->
+            val categoria = backStackEntry.arguments?.getString("categoria") ?: ""
+            RecipeListScreen(navController, categoria)
         }
     }
 }

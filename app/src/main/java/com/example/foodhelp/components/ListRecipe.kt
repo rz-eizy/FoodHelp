@@ -63,7 +63,7 @@ fun RecipeList(
     onRecipeClick: (Long) -> Unit
 ){
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxWidth(),
         contentPadding = PaddingValues(vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {

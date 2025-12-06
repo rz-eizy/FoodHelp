@@ -32,11 +32,13 @@ import com.example.foodhelp.components.AlertDialogExample
 @Composable
 fun RecipeListScreen(
     navController: NavController,
+    categoria: String,
     viewModel: RecipeViewModel = hiltViewModel()
 ){
+    LaunchedEffect(Unit) {
+        viewModel.findRecipeByCategory(categoria)
+    }
     val uiState by viewModel.uiState.collectAsState()
-    val recipes = uiState.recetasEncontradas
-
     val onRecipeClick: (Long) -> Unit = { recipeId ->
         navController.navigate(AppScreens.RecipeScreen.createRoute(recipeId))
     }
@@ -80,28 +82,32 @@ fun RecipeListScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .background(AppBackground),
-            verticalArrangement = Arrangement.Center,
+            verticalArrangement = Arrangement.Top,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            if (uiState.isLoading) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
+            when {
+                uiState.isLoading -> {
+                    CircularProgressIndicator(
+                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                    )
                 }
-            } else if (uiState.errorMessage != null) {
-                AlertDialogExample(
-                    onConfirmation = {
-                        viewModel.onErrorHandled()
-                        navController.popBackStack()
-                    },
-                    dialogTitle = "ERROR",
-                    dialogText = uiState.errorMessage!!
-                )
-            } else {
-                RecipeListCard(
-                    modifier = Modifier,
-                    recipes = recipes,
-                    onRecipeClick = onRecipeClick
-                )
+                uiState.errorMessage != null ->{
+                    AlertDialogExample(
+                        onConfirmation = {
+                            viewModel.onErrorHandled()
+                            navController.popBackStack()
+                        },
+                        dialogTitle = "ERROR",
+                        dialogText = uiState.errorMessage!!
+                    )
+                }
+                else -> {
+                    RecipeListCard(
+                        recipes = uiState.recetas,
+                        onRecipeClick = onRecipeClick,
+                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                    )
+                }
             }
         }
     }
