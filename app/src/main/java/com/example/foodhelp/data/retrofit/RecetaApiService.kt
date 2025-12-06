@@ -4,10 +4,16 @@ import com.example.foodhelp.data.Receta
 import retrofit2.http.GET
 import retrofit2.http.Query
 import retrofit2.Response
+import retrofit2.http.Path
 
 // clase encargada de hacer las llamadas a springbot
 
 interface RecetaApiService {
+
+    @GET("api/recetas/{id}")
+    suspend fun buscarRecetaPorId(
+        @Path("id") id: Long
+    ): Response<Receta>
 
     @GET("api/recetas/buscar")
     suspend fun buscarRecetas(
