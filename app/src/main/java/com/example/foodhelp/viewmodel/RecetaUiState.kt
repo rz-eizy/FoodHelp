@@ -6,6 +6,7 @@ data class RecetaUiState (
     val query: String = "",
     val isLoading: Boolean = false,
     val recetas: List<Receta> = emptyList(),
+    val selectedReceta: Receta? = null,
     val errorMessage: String? = null,
     val navigateToRecipeId: Long? = null
 )
