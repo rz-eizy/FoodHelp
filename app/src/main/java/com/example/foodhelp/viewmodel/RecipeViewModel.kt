@@ -68,6 +68,31 @@ class RecipeViewModel @Inject constructor(
         }
     }
 
+    fun findRecipeById(id: Long) = viewModelScope.launch {
+        _uiState.update { it
+            .copy(isLoading = true, errorMessage = null)
+        }
+
+        try {
+            val receta = repository.finById(id)
+
+            _uiState.update {
+                it.copy(
+                    isLoading = false,
+                    selectedReceta = receta,
+                    errorMessage = if (receta == null) "Receta no encontrada" else null
+                )
+            }
+        } catch (e: Exception){
+            _uiState.update {
+                it.copy(
+                    isLoading = false,
+                    errorMessage = "ERROR: ${e.message}"
+                )
+            }
+        }
+    }
+
     fun findRecipeByCategory(categoria: String) = viewModelScope.launch {
         _uiState.update { it
             .copy(isLoading = true, errorMessage = null, navigateToRecipeId = null)

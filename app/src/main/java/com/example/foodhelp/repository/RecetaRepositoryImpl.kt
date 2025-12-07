@@ -2,6 +2,7 @@ package com.example.foodhelp.repository
 
 import com.example.foodhelp.data.Receta
 import com.example.foodhelp.data.retrofit.RecetaApiService
+import retrofit2.Response
 import javax.inject.Inject
 
 class RecetaRepositoryImpl @Inject constructor(
@@ -13,5 +14,9 @@ class RecetaRepositoryImpl @Inject constructor(
 
     override suspend fun findByCategory(query: String): List<Receta> {
         return apiService.buscarRecetasPorCategoria(query)
+    }
+
+    override suspend fun finById(id: Long): Receta? {
+        return apiService.buscarRecetaPorId((id))
     }
 }

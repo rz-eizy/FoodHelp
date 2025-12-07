@@ -13,7 +13,7 @@ interface RecetaApiService {
     @GET("api/recetas/{id}")
     suspend fun buscarRecetaPorId(
         @Path("id") id: Long
-    ): Response<Receta>
+    ): Receta
 
     @GET("api/recetas/buscar")
     suspend fun buscarRecetas(
