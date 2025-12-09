@@ -62,7 +62,8 @@ fun HomeScreen(
                 HomeSegmentedButton(
                     modifier = Modifier
                         .background(SurfaceBackground)
-                        .windowInsetsPadding(WindowInsets.navigationBars)
+                        .windowInsetsPadding(WindowInsets.navigationBars),
+                    navController
                 )
             }
         }

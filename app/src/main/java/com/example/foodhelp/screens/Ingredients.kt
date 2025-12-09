@@ -55,7 +55,8 @@ fun IngredientScreen(navController: NavController){
                 HomeSegmentedButton(
                     modifier = Modifier
                         .background(SurfaceBackground)
-                        .windowInsetsPadding(WindowInsets.navigationBars)
+                        .windowInsetsPadding(WindowInsets.navigationBars),
+                    navController
                 )
             }
         }

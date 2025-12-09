@@ -20,11 +20,14 @@ import com.example.foodhelp.ui.theme.ComponentAccent
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.navigation.NavController
+import com.example.foodhelp.navigation.AppScreens
 import com.example.foodhelp.ui.theme.MyApplicationTheme
 
 @Composable
 fun HomeSegmentedButton(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    navController: NavController
 ){
     var selectedIndex by remember { mutableIntStateOf(0) }
     val options = listOf(Icons.Filled.Home to "Inicio", Icons.Filled.Search to "Busqueda")
@@ -38,7 +41,7 @@ fun HomeSegmentedButton(
                 onClick = { selectedIndex = index
                           when(index){
                               0 -> {/*  Navegar a HomeScreen  */}
-                              1 -> {/*  Navegar a SearchIngredients  */}
+                              1 -> { navController.navigate(AppScreens.IngredientScreen.route) }
                           }},
                 selected = index == selectedIndex,
                 label = {Text(description)},
@@ -103,6 +106,6 @@ fun SaveAndIngredients(
 @Composable
 fun ButtonPreview(){
     MyApplicationTheme {
-        HomeSegmentedButton()
+        //HomeSegmentedButton()
     }
 }

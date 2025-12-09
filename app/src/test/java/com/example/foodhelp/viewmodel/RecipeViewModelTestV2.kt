@@ -69,7 +69,7 @@ class RecipeViewModelTestV2 {
 
         val state = vm.uiState.value
 
-        assert(state.recetasEncontradas == recetas)
+        assert(state.recetas == recetas)
         assert(state.navigateToRecipeId == 101L)
         assert(state.errorMessage == null)
     }
@@ -83,7 +83,7 @@ class RecipeViewModelTestV2 {
 
         val state = vm.uiState.value
         assert(state.errorMessage == "La busqueda no puede estar vacia")
-        assert(state.recetasEncontradas.isEmpty())
+        assert(state.recetas.isEmpty())
         assert(!state.isLoading)
     }
     @Test
@@ -110,7 +110,7 @@ class RecipeViewModelTestV2 {
         advanceUntilIdle()
 
         val state = vm.uiState.value
-        assert(state.recetasEncontradas.isEmpty())
+        assert(state.recetas.isEmpty())
         assert(state.errorMessage == "No se encontraron resultados.")
     }
 
@@ -155,7 +155,7 @@ class RecipeViewModelTestV2 {
         advanceUntilIdle()
 
         val state = vm.uiState.value
-        assert(state.recetasEncontradas == recetas)
+        assert(state.recetas == recetas)
         assert(state.errorMessage == null)
     }
     @Test
@@ -167,7 +167,7 @@ class RecipeViewModelTestV2 {
         vm.buscarRecetas("carne")
         advanceUntilIdle()
 
-        val previo = vm.uiState.value.recetasEncontradas
+        val previo = vm.uiState.value.recetas
         coEvery { repository.findRecipeByName("pollo") } throws Exception("fallo")
 
         vm.buscarRecetas("pollo")
@@ -175,7 +175,7 @@ class RecipeViewModelTestV2 {
 
         val state = vm.uiState.value
         assert(state.errorMessage != null)
-        assert(state.recetasEncontradas == previo)
+        assert(state.recetas == previo)
     }
     @Test
     fun buscarRecetas_listaDesordenada_navegaAlPrimeroDeLaLista() = runTest {
