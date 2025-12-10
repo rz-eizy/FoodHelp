@@ -108,7 +108,7 @@ fun RecipeView(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.Start
         ) {
-            ingredientList.take(3).forEachIndexed { index, igd ->
+            ingredientList.take(2).forEachIndexed { index, igd ->
                 IngredientChip(name = igd, 0)
                 if (index < 2) {
                     Spacer(modifier = Modifier.width(8.dp))
@@ -124,16 +124,19 @@ fun RecipeView(
 
 @Composable
 fun IngredientChip(name: Ingrediente, x: Int) {
+    val textToShow = if (x == 1) {
+        "..."
+    } else {
+        name.nombre
+    }
+
     Surface(
         color = Color(0xFFC7C7C7),
         shape = RoundedCornerShape(20.dp),
         modifier = Modifier.height(32.dp)
     ) {
         Text(
-            text =
-                if (x != 0){
-                    name.nombre
-                } else{"..."},
+            text = textToShow,
             color = Color.Black,
             fontSize = 14.sp,
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
