@@ -15,16 +15,21 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
-import com.example.foodhelp.ui.theme.ColorButton
 import com.example.foodhelp.ui.theme.ComponentAccent
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
+import com.example.foodhelp.navigation.AppScreens
 import com.example.foodhelp.ui.theme.MyApplicationTheme
+import com.example.foodhelp.ui.theme.NaranjaSuave
+import com.example.foodhelp.ui.theme.Salmon
 
 @Composable
 fun HomeSegmentedButton(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    navController: NavController
 ){
     var selectedIndex by remember { mutableIntStateOf(0) }
     val options = listOf(Icons.Filled.Home to "Inicio", Icons.Filled.Search to "Busqueda")
@@ -37,8 +42,8 @@ fun HomeSegmentedButton(
                 ),
                 onClick = { selectedIndex = index
                           when(index){
-                              0 -> {/*  Navegar a HomeScreen  */}
-                              1 -> {/*  Navegar a SearchIngredients  */}
+                              0 -> {  navController.navigate(AppScreens.HomeScreen.route)  }
+                              1 -> { navController.navigate(AppScreens.IngredientScreen.route) }
                           }},
                 selected = index == selectedIndex,
                 label = {Text(description)},
@@ -49,10 +54,10 @@ fun HomeSegmentedButton(
                     )
                 },
                 colors = SegmentedButtonDefaults.colors(
-                    activeContainerColor = ComponentAccent,
-                    activeContentColor = ColorButton,
-                    inactiveContainerColor = ColorButton,
-                    inactiveContentColor = ComponentAccent
+                    activeContainerColor = Salmon,
+                    activeContentColor = NaranjaSuave,
+                    inactiveContainerColor = NaranjaSuave,
+                    inactiveContentColor = Salmon
                 )
             )
         }
@@ -77,7 +82,7 @@ fun SaveAndIngredients(
                .height(50.dp)
                .padding(end = 8.dp),
            colors = ButtonDefaults.buttonColors(
-               containerColor = ColorButton,
+               containerColor = Salmon,
                contentColor = ComponentAccent
            ),
            shape = RoundedCornerShape(20.dp)
@@ -90,7 +95,7 @@ fun SaveAndIngredients(
                 .height(50.dp)
                 .padding(start = 8.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = ColorButton,
+                containerColor = Salmon,
                 contentColor = ComponentAccent
             ),
             shape = RoundedCornerShape(20.dp)
@@ -103,6 +108,8 @@ fun SaveAndIngredients(
 @Composable
 fun ButtonPreview(){
     MyApplicationTheme {
-        HomeSegmentedButton()
+        val navController = rememberNavController()
+        //HomeSegmentedButton(navController= navController)
+        SaveAndIngredients({},{})
     }
 }

@@ -1,8 +1,11 @@
 package com.example.foodhelp.backend.entidades;
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 import java.util.Set;
 
-
+@Getter
+@Setter
 @Entity
 @Table(name = "receta")
 public class Receta {
@@ -10,6 +13,7 @@ public class Receta {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String nombre;
+    @Column(columnDefinition = "TEXT")
     private String descripcion;
 
     @Column(name = "tiempo_preparacion")
@@ -18,9 +22,10 @@ public class Receta {
     @Column(name = "imagen_url")
     private String imagenUrl;
 
+    @Column(columnDefinition = "TEXT")
     private String instrucciones;
 
-    @OneToMany(mappedBy = "receta",cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @OneToMany(mappedBy = "receta")
     private Set<Ingrediente> ingredientes;
 
     @ManyToOne(fetch = FetchType.EAGER)
@@ -41,70 +46,6 @@ public class Receta {
         this.nombre = nombre;
     }
 
-    public Categoria getCategoria() {
-        return categoria;
-    }
-
-    public void setCategoria(Categoria categoria) {
-        this.categoria = categoria;
-    }
-
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getNombre() {
-        return nombre;
-    }
-
-    public void setNombre(String nombre) {
-        this.nombre = nombre;
-    }
-
-    public String getDescripcion() {
-        return descripcion;
-    }
-
-    public void setDescripcion(String descripcion) {
-        this.descripcion = descripcion;
-    }
-
-    public Integer getTiempoPreparacion() {
-        return tiempoPreparacion;
-    }
-
-    public void setTiempoPreparacion(Integer tiempoPreparacion) {
-        this.tiempoPreparacion = tiempoPreparacion;
-    }
-
-    public String getImagenUrl() {
-        return imagenUrl;
-    }
-
-    public void setImagenUrl(String imagenUrl) {
-        this.imagenUrl = imagenUrl;
-    }
-
-    public String getInstrucciones() {
-        return instrucciones;
-    }
-
-    public void setInstrucciones(String instrucciones) {
-        this.instrucciones = instrucciones;
-    }
-
-    public Set<Ingrediente> getIngredientes() {
-        return ingredientes;
-    }
-
-    public void setIngredientes(Set<Ingrediente> ingredientes) {
-        this.ingredientes = ingredientes;
-    }
 
     @Override
     public String toString() {

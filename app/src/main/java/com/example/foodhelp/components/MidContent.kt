@@ -1,5 +1,6 @@
 package com.example.foodhelp.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.example.foodhelp.ui.theme.Cuarzo
 
 @Composable
 fun RecipeContent(
@@ -43,20 +45,34 @@ fun RecipeContent(
 
 @Composable
 fun HomeCategory(
+    onCategoryClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ){
     Column(
         modifier = modifier
+            .background(Cuarzo)
             .fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Top
     ) {
-        RowCategory(modifier = Modifier.weight(1f),
-            firstOnClick = {},secondOnClick = {}, firstName = "Postres", secondName = "Masas")
-        RowCategory(modifier = Modifier.weight(1f),
-            firstOnClick = {},secondOnClick = {}, firstName = "Carnes", secondName = "Desayuno")
-        RowCategory(modifier = Modifier.weight(1f),
-            firstOnClick = {},secondOnClick = {}, firstName = "Frituras", secondName = "Guardadas")
+        RowCategory(
+            modifier = Modifier.weight(1f),
+            firstOnClick = { onCategoryClick("Postres") },
+            secondOnClick = { onCategoryClick("Masas") },
+            firstName = "Postres",
+            secondName = "Masas")
+        RowCategory(
+            modifier = Modifier.weight(1f),
+            firstOnClick = { onCategoryClick("Carnes") },
+            secondOnClick = { onCategoryClick("Desayuno") },
+            firstName = "Carnes",
+            secondName = "Desayuno")
+        RowCategory(
+            modifier = Modifier.weight(1f),
+            firstOnClick = { onCategoryClick("Frituras") },
+            secondOnClick = { /*  NAVEGAR CON EL LOG  */ },
+            firstName = "Frituras",
+            secondName = "Guardadas")
     }
 }
 

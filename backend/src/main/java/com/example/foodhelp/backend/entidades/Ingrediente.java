@@ -1,7 +1,14 @@
 package com.example.foodhelp.backend.entidades;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
+
 @Entity
+@Getter
+@Setter
 @Table(name = "ingrediente")
 public class Ingrediente {
 
@@ -17,6 +24,7 @@ public class Ingrediente {
 
     @ManyToOne
     @JoinColumn(name = "receta_id")
+    @JsonIgnore
     private Receta receta;
 
     public Ingrediente(){

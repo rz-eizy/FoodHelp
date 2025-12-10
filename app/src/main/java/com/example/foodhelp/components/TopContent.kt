@@ -17,12 +17,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.example.foodhelp.ui.theme.AppBackground
-import com.example.foodhelp.ui.theme.SelectedToggle
+import com.example.foodhelp.ui.theme.*
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.SearchBar
+import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.getValue
@@ -50,7 +49,7 @@ fun RecipeHeader(
                     topStart = 0.dp, topEnd = 0.dp,
                     bottomStart = 100.dp, bottomEnd = 100.dp
                 )),
-            color = SelectedToggle
+            color = RojoFuerte
         ) {  }
 
         RecipeHeaderContent(appName = appName, recipeName = recipeName,
@@ -76,13 +75,14 @@ fun RecipeHeaderContent(
             Text(
                 text = appName,
                 style = MaterialTheme.typography.headlineLarge,
-                color = Color.Black
+                color = RojoOpaco
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = recipeName,
                 style = MaterialTheme.typography.headlineMedium,
-                color = Color.White)
+                color = RojoOpaco
+            )
         }
 
         SaveAndIngredients(
@@ -112,7 +112,10 @@ fun MySearchBar(
         active = active,
         onActiveChange = {active = it},
         placeholder = { Text("Buscar Recetas") },
-        modifier = modifier.fillMaxWidth()
+        modifier = modifier.fillMaxWidth().background(Cuarzo),
+        colors = SearchBarDefaults.colors(
+            containerColor = Ceniza
+        )
     ) {
         /*
         Aqui se agrega lo que ocurre cuando se usa search bar
