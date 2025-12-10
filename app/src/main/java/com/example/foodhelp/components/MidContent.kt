@@ -1,5 +1,6 @@
 package com.example.foodhelp.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.example.foodhelp.ui.theme.Cuarzo
 
 @Composable
 fun RecipeContent(
@@ -48,6 +50,7 @@ fun HomeCategory(
 ){
     Column(
         modifier = modifier
+            .background(Cuarzo)
             .fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Top

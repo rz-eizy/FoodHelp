@@ -24,6 +24,8 @@ import com.example.foodhelp.components.MySearchBar
 import com.example.foodhelp.components.HomeSegmentedButton
 import com.example.foodhelp.navigation.AppScreens
 import com.example.foodhelp.ui.theme.SurfaceBackground
+import com.example.foodhelp.ui.theme.Ceniza
+import com.example.foodhelp.ui.theme.Cuarzo
 import com.example.foodhelp.viewmodel.RecipeViewModel
 
 @Composable
@@ -48,7 +50,7 @@ fun HomeScreen(
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(SurfaceBackground)
+                    .background(Cuarzo)
                     .windowInsetsPadding(WindowInsets.statusBars)
             )
         },
@@ -56,7 +58,7 @@ fun HomeScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(SurfaceBackground),
+                    .background(Cuarzo),
                 contentAlignment = Alignment.Center
             ) {
                 HomeSegmentedButton(
@@ -85,11 +87,12 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .background(SurfaceBackground),
+                .background(Cuarzo),
         ){
             Box(
                 modifier = Modifier
                     .weight(1f)
+                    .background(Cuarzo)
                     .fillMaxWidth(),
                 contentAlignment = Alignment.Center
             ){
@@ -98,6 +101,7 @@ fun HomeScreen(
                         navController.navigate(AppScreens.RecListScreen.createRoute(category))
                     },
                     modifier = Modifier
+                        .background(Ceniza)
                         .size(height = 550.dp, width = 325.dp)
                 )
             }
