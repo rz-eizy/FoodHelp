@@ -9,7 +9,7 @@ pre-commit:
       root: "backend"
       glob: "src/main/kotlin/**/*.kt"
       # Requiere que agregues un plugin de ktlint a tu pom.xml
-      run: mvn antrun:run@ktlint-format {staged_files}
+      run: mvn ktlint:format
       stage_fixed: true
 
     lint-frontend:
