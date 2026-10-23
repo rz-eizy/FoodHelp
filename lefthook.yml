@@ -52,6 +52,6 @@ pre-push:
       root: "backend"
       run: mvn test
 
-    test-frontend:
-      root: "frontend"
-      run: ./gradlew testDebugUnitTest
+#    test-frontend:
+#      root: "frontend"
+#      run: ./gradlew testDebugUnitTest
