@@ -21,5 +21,7 @@ local.properties
 local.properties
 .idea/deploymentTargetSelector.xml
 
+.vscode
+
 logs/foodhelp-registros.log
 backend/logs/foodhelp-registros.log
