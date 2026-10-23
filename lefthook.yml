@@ -1,0 +1,57 @@
+# lefthook.yml
+# Ejecución en paralelo para el monorepo FoodHelp (Backend Maven + Frontend Gradle)
+
+pre-commit:
+  parallel: true
+  commands:
+    lint-backend:
+      # La propiedad 'root' aísla la ejecución a esta carpeta
+      root: "backend"
+      glob: "src/main/kotlin/**/*.kt"
+      # Requiere que agregues un plugin de ktlint a tu pom.xml
+      run: mvn ktlint:format
+      stage_fixed: true
+
+    lint-frontend:
+      root: "frontend"
+      glob: "app/src/main/java/**/*.kt"
+      # Requiere el plugin de ktlint en build.gradle
+      run: ./gradlew ktlintFormat
+      stage_fixed: true
+
+commit-msg:
+  commands:
+    conventional-commits:
+      # Exige obligatoriamente un scope de los módulos de FoodHelp
+      run: |
+        MSG=$(cat {1})
+        # Scopes definidos: hogar, inventario, recetas, alertas, core, ui, ci
+        PATTERN="^(feat|fix|docs|style|refactor|test|chore|ci|perf): [a-zA-Z0-9_ -]{1,100}$"
+        
+        if ! echo "$MSG" | grep -qE "$PATTERN"; then
+          echo ""
+          echo " |ERROR| Mensaje de commit inválido. |ERROR|"
+          echo "   Formato requerido : type(scope): descripción corta"
+          echo "   Tipos válidos     : feat|fix|docs|style|refactor|test|chore|ci|perf"
+          echo "   Scopes permitidos : hogar|inventario|recetas|alertas|core|ui|ci"
+          echo ""
+          echo "   Ejemplos válidos:"
+          echo "     feat(inventario): agregar autocompletado de productos"
+          echo "     fix(hogar): corregir concurrencia al unirse por codigo"
+          echo "     chore(ci): actualizar version de spring boot"
+          echo ""
+          echo "   Mensaje recibido  : $MSG"
+          echo ""
+          exit 1
+        fi
+
+pre-push:
+  parallel: true
+  commands:
+    test-backend:
+      root: "backend"
+      run: mvn test
+
+    test-frontend:
+      root: "frontend"
+      run: ./gradlew testDebugUnitTest
