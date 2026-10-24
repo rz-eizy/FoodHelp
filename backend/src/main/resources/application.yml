@@ -1,0 +1,13 @@
+spring:
+    datasource: 
+        url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/foodhelp}
+        username: ${POSTGRES_USER:postgresql}
+        password: ${POSTGRES_PASSWORD:123postgresql}
+        driver-class-name: org.postgresql.Driver
+    jpa:
+        hibernate:
+            ddl-auto: ${DDL_AUTO:update}
+        show-sql: true # cambiar esto en producción
+        properties:
+            hibernate:
+                '[format_sql]': true
