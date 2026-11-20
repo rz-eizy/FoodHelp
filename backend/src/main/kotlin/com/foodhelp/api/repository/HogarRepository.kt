@@ -6,4 +6,6 @@ import java.util.UUID
 
 interface HogarRepository : JpaRepository<Hogar, UUID> {
     fun findByCodigoHogar(codigoHogar: String): Hogar?
+
+    fun existsByCodigoHogar(codigoHogar: String): Boolean
 }
