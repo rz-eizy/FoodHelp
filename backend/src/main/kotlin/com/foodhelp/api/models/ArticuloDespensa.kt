@@ -8,6 +8,7 @@ import jakarta.persistence.FetchType
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
+import jakarta.persistence.Index
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
@@ -17,7 +18,13 @@ import java.time.LocalDate
 import java.util.UUID
 
 @Entity
-@Table(name = "articulos_despensa")
+@Table(
+    name = "articulos_despensa",
+    indexes = [
+        Index(name = "idx_articulos_hogar", columnList = "hogar_id"),
+        Index(name = "idx_articulos_vencimiento", columnList = "fecha_vencimiento"),
+    ],
+)
 class ArticuloDespensa(
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -45,5 +52,5 @@ class ArticuloDespensa(
         return id != null && id == other.id
     }
 
-    override fun hashCode(): Int = id?.hashCode() ?: 0
+    override fun hashCode(): Int = id.hashCode()
 }

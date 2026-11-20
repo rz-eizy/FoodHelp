@@ -5,12 +5,18 @@ import jakarta.persistence.Entity
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
+import jakarta.persistence.Index
 import jakarta.persistence.Table
+import jakarta.persistence.UniqueConstraint
 import java.time.LocalDate
 import java.util.UUID
 
 @Entity
-@Table(name = "alertas")
+@Table(
+    name = "alertas",
+    uniqueConstraints = [UniqueConstraint(name = "uk_alertas_articulo", columnNames = ["articulo_id"])],
+    indexes = [Index(name = "idx_alertas_hogar", columnList = "hogar_id")],
+)
 class Alerta(
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -20,13 +26,13 @@ class Alerta(
     @Column(nullable = false)
     val nombreProducto: String,
     @Column(nullable = false)
-    val diasRestantes: Int,
+    var diasRestantes: Int,
     @Column(nullable = false)
     val hogarId: UUID,
     @Column(nullable = false)
     var leida: Boolean = false,
     @Column(nullable = false)
-    val fechaCreacion: LocalDate = LocalDate.now(),
+    val fechaCreacion: LocalDate,
 ) {
     override fun toString(): String =
         "Alerta(id=$id, articuloId=$articuloId, nombreProducto='$nombreProducto', diasRestantes=$diasRestantes, hogarId=$hogarId, leida=$leida, fechaCreacion=$fechaCreacion)"
@@ -37,5 +43,5 @@ class Alerta(
         return id != null && id == other.id
     }
 
-    override fun hashCode(): Int = id?.hashCode() ?: 0
+    override fun hashCode(): Int = id.hashCode()
 }
