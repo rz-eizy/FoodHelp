@@ -45,7 +45,7 @@ class HogarYUsuarioRepositoryTest {
 
     @Test
     fun `Test 3 - persistir un Usuario con hogar null es valido`() {
-        val usuario = Usuario(nombre = "Ana García", contrasena = "secreto123", hogar = null)
+        val usuario = Usuario(nombre = "Ana García", contrasena = "secreto123", correo = "ana@test.com", hogar = null)
 
         val guardado = usuarioRepository.saveAndFlush(usuario)
 

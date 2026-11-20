@@ -80,7 +80,14 @@ class HogarControllerTest {
     fun `Test 3 - el DTO de respuesta omite estrictamente las contrasenas de la base de datos`() {
         val hogar = hogarRepository.save(Hogar(nombre = "Casa Segura", codigoHogar = "SEC123"))
         val contrasenaSecreta = "password_secreto_123"
-        usuarioRepository.save(Usuario(nombre = "Carlos", contrasena = contrasenaSecreta, hogar = hogar))
+        usuarioRepository.save(
+            Usuario(
+                nombre = "Carlos",
+                contrasena = contrasenaSecreta,
+                correo = "carlos-hogar@test.com",
+                hogar = hogar,
+            ),
+        )
 
         val result =
             mockMvc

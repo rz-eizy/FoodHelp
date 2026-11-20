@@ -18,14 +18,16 @@ class Usuario(
     @GeneratedValue(strategy = GenerationType.UUID)
     val id: UUID? = null,
     @Column(nullable = false)
-    val nombre: String,
+    var nombre: String,
     @Column(nullable = false)
-    val contrasena: String,
-    @Column(nullable = true, unique = true)
-    val correo: String? = null,
+    var contrasena: String,
+    @Column(nullable = false, unique = true)
+    var correo: String,
     @ManyToOne(fetch = FetchType.LAZY, optional = true)
     @JoinColumn(name = "hogar_id", nullable = true)
-    val hogar: Hogar? = null,
+    var hogar: Hogar? = null,
+    @Column(name = "token_version", nullable = false)
+    var tokenVersion: Int = 0,
 ) {
     override fun toString(): String = "Usuario(id=$id, nombre='$nombre', correo='$correo')"
 
@@ -35,5 +37,5 @@ class Usuario(
         return id != null && id == other.id
     }
 
-    override fun hashCode(): Int = id?.hashCode() ?: 0
+    override fun hashCode(): Int = id.hashCode()
 }

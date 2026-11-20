@@ -67,7 +67,6 @@ class ArticuloRepositoryTest {
         val articulosAntes = articuloRepository.findByHogarId(hogar.id!!)
         assertEquals(2, articulosAntes.size)
 
-        // Eliminamos el hogar padre
         hogarRepository.delete(hogar)
         hogarRepository.flush()
 

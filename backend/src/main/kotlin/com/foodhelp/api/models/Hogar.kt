@@ -17,13 +17,13 @@ class Hogar(
     @GeneratedValue(strategy = GenerationType.UUID)
     val id: UUID? = null,
     @Column(nullable = false)
-    val nombre: String,
+    var nombre: String,
     @Column(nullable = false, unique = true)
     val codigoHogar: String,
     @OneToMany(mappedBy = "hogar")
-    val usuarios: MutableList<Usuario> = mutableListOf(),
+    var usuarios: MutableList<Usuario> = mutableListOf(),
     @OneToMany(mappedBy = "hogar", cascade = [CascadeType.ALL], orphanRemoval = true)
-    val articulos: MutableList<ArticuloDespensa> = mutableListOf(),
+    var articulos: MutableList<ArticuloDespensa> = mutableListOf(),
 ) {
     override fun toString(): String = "Hogar(id=$id, nombre='$nombre', codigoHogar='$codigoHogar')"
 
@@ -33,5 +33,5 @@ class Hogar(
         return id != null && id == other.id
     }
 
-    override fun hashCode(): Int = id?.hashCode() ?: 0
+    override fun hashCode(): Int = id.hashCode()
 }
