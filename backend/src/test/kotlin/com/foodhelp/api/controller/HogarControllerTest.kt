@@ -27,7 +27,7 @@ class HogarControllerTest {
     private lateinit var webApplicationContext: WebApplicationContext
 
     private val objectMapper =
-        com.fasterxml.jackson.module.kotlin
+        tools.jackson.module.kotlin
             .jacksonObjectMapper()
 
     @Autowired
