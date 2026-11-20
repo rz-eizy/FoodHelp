@@ -1,27 +1,22 @@
 *.iml
 .gradle
 /local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
+/.idea
 .DS_Store
 /build
 /captures
 .externalNativeBuild
 .cxx
 local.properties
-<<<<<<< Updated upstream
-
-# Archivos específicos de configuracion del IDE (Android Studio)
-/.idea/misc.xml
-/.idea/vcs.xml
-local.properties
-.idea/deploymentTargetSelector.xml
 
 .vscode
+
+.env
+target/
+*.log
+backend_development.md
+backend/AUDITORIA_*.md
+backend/Auditoria_No_Uso.md
 
 logs/foodhelp-registros.log
 backend/logs/foodhelp-registros.log

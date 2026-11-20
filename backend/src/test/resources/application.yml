@@ -4,8 +4,26 @@ spring:
     driver-class-name: org.h2.Driver
     username: sa
     password:
+  flyway:
+    enabled: false
+  http:
+    clients:
+      connect-timeout: 1s
+      read-timeout: 1s
   jpa:
     hibernate:
       ddl-auto: create-drop
     database-platform: org.hibernate.dialect.H2Dialect
     show-sql: false
+
+app:
+  zona-horaria: UTC
+
+jwt:
+  secret: secreto-solo-para-tests-0123456789-abcdefghijklmnopqrstuvwxyz
+  expiration: 3600000
+
+spoonacular:
+  api:
+    key: test-api-key
+    base-url: https://api.spoonacular.com
