@@ -1,5 +1,7 @@
 package com.foodhelp.api.security
 
+import com.foodhelp.api.models.Usuario
+import com.foodhelp.api.repository.UsuarioRepository
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -19,13 +21,24 @@ class RateLimitingTest {
     @Autowired
     private lateinit var mockMvc: MockMvc
 
+    @Autowired
+    private lateinit var usuarioRepository: UsuarioRepository
+
+    @Autowired
+    private lateinit var jwtService: JwtService
+
     @Qualifier("limitadorLogin")
     @Autowired
     private lateinit var limitadorLogin: LimitadorIntentos
 
+    @Qualifier("limitadorUnirse")
+    @Autowired
+    private lateinit var limitadorUnirse: LimitadorIntentos
+
     @BeforeEach
     fun setUp() {
         limitadorLogin.limpiarTodo()
+        limitadorUnirse.limpiarTodo()
     }
 
     @Test
@@ -197,5 +210,46 @@ class RateLimitingTest {
                         .content(loginErroneo),
                 ).andExpect(status().isUnauthorized)
         }
+    }
+
+    @Test
+    fun `10 intentos fallidos de unirse a hogar bloquean el intento 11 con HTTP 429`() {
+        val correo = "unirse_rate_${UUID.randomUUID()}@test.com"
+        val usuario =
+            usuarioRepository.save(
+                Usuario(
+                    nombre = "Usuario Unirse",
+                    contrasena = "pass123",
+                    correo = correo,
+                    hogar = null,
+                ),
+            )
+        val token = "Bearer " + jwtService.tokenParaUsuario(usuario)
+
+        val requestInexistente =
+            """
+            {
+                "codigoHogar": "INEXIST123"
+            }
+            """.trimIndent()
+
+        repeat(10) {
+            mockMvc
+                .perform(
+                    post("/api/hogares/unirse")
+                        .header("Authorization", token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestInexistente),
+                ).andExpect(status().isNotFound)
+        }
+
+        mockMvc
+            .perform(
+                post("/api/hogares/unirse")
+                    .header("Authorization", token)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(requestInexistente),
+            ).andExpect(status().isTooManyRequests)
+            .andExpect(jsonPath("$.error").value("Demasiados intentos. Inténtalo de nuevo más tarde"))
     }
 }

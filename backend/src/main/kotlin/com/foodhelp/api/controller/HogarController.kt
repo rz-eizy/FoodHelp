@@ -4,6 +4,7 @@ import com.foodhelp.api.dto.CreateHogarRequest
 import com.foodhelp.api.dto.HogarResponse
 import com.foodhelp.api.dto.JoinHogarRequest
 import com.foodhelp.api.service.HogarService
+import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
@@ -20,25 +21,22 @@ class HogarController(
 ) {
     @PostMapping
     fun crearHogar(
-        @RequestBody request: CreateHogarRequest,
-    ): ResponseEntity<HogarResponse> {
-        val response = hogarService.crearHogar(request)
-        return ResponseEntity.status(HttpStatus.CREATED).body(response)
-    }
+        @Valid @RequestBody request: CreateHogarRequest,
+    ): ResponseEntity<HogarResponse> = ResponseEntity.status(HttpStatus.CREATED).body(hogarService.crearHogar(request))
 
     @PostMapping("/unirse")
     fun unirseAHogar(
-        @RequestBody request: JoinHogarRequest,
-    ): ResponseEntity<HogarResponse> {
-        val response = hogarService.unirseAHogar(request)
-        return ResponseEntity.ok(response)
-    }
+        @Valid @RequestBody request: JoinHogarRequest,
+    ): ResponseEntity<HogarResponse> = ResponseEntity.ok(hogarService.unirseAHogar(request))
 
     @GetMapping("/{codigoHogar}")
     fun obtenerHogar(
         @PathVariable codigoHogar: String,
-    ): ResponseEntity<HogarResponse> {
-        val response = hogarService.obtenerHogar(codigoHogar)
-        return ResponseEntity.ok(response)
+    ): ResponseEntity<HogarResponse> = ResponseEntity.ok(hogarService.obtenerHogar(codigoHogar))
+
+    @PostMapping("/salir")
+    fun salirDelHogar(): ResponseEntity<Void> {
+        hogarService.salirDelHogar()
+        return ResponseEntity.noContent().build()
     }
 }

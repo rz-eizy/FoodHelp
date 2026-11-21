@@ -5,49 +5,122 @@ import com.foodhelp.api.dto.HogarResponse
 import com.foodhelp.api.dto.JoinHogarRequest
 import com.foodhelp.api.dto.UsuarioResponse
 import com.foodhelp.api.exception.HogarNotFoundException
+import com.foodhelp.api.exception.UsuarioSinHogarException
+import com.foodhelp.api.exception.UsuarioYaEnHogarException
 import com.foodhelp.api.models.Hogar
 import com.foodhelp.api.repository.HogarRepository
+import com.foodhelp.api.repository.UsuarioRepository
+import com.foodhelp.api.security.LimitadorIntentos
+import com.foodhelp.api.security.UsuarioActualService
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import java.util.UUID
+import java.security.SecureRandom
 
 @Service
 class HogarService(
     private val hogarRepository: HogarRepository,
+    private val usuarioRepository: UsuarioRepository,
+    private val usuarioActualService: UsuarioActualService,
+    @Qualifier("limitadorUnirse")
+    private val limitadorUnirse: LimitadorIntentos,
 ) {
-    fun crearHogar(request: CreateHogarRequest): HogarResponse {
-        val codigo =
-            UUID
-                .randomUUID()
-                .toString()
-                .take(8)
-                .uppercase()
-        val hogar = Hogar(nombre = request.nombre, codigoHogar = codigo)
-        return hogarRepository.save(hogar).toResponse()
+    @Transactional
+    fun salirDelHogar() {
+        val usuario = usuarioActualService.usuarioActual()
+        val hogar = usuario.hogar ?: throw UsuarioSinHogarException()
+        val hogarId = checkNotNull(hogar.id)
+        usuario.hogar = null
+        hogar.usuarios.remove(usuario)
+        usuarioRepository.saveAndFlush(usuario)
+
+        val restantes = usuarioRepository.countByHogarId(hogarId)
+        if (restantes == 0L) {
+            hogarRepository.delete(hogar)
+        }
     }
 
-    @Transactional(readOnly = true)
-    fun unirseAHogar(request: JoinHogarRequest): HogarResponse {
+    @Transactional
+    fun crearHogar(request: CreateHogarRequest): HogarResponse {
+        val usuario = usuarioActualService.usuarioActual()
+        if (usuario.hogar != null) throw UsuarioYaEnHogarException()
+
         val hogar =
-            hogarRepository.findByCodigoHogar(request.codigoHogar)
-                ?: throw HogarNotFoundException(request.codigoHogar)
+            hogarRepository.save(
+                Hogar(nombre = request.nombre.trim(), codigoHogar = generarCodigoUnico()),
+            )
+
+        // El alta del creador se persiste por dirty checking, sin guardado explícito
+        usuario.hogar = hogar
+        hogar.usuarios.add(usuario)
+        return hogar.toResponse()
+    }
+
+    @Transactional
+    fun unirseAHogar(request: JoinHogarRequest): HogarResponse {
+        val usuario = usuarioActualService.usuarioActual()
+        if (usuario.hogar != null) throw UsuarioYaEnHogarException()
+
+        val clave = usuario.correo
+        limitadorUnirse.exigirDisponible(clave)
+
+        val codigo = request.codigoHogar.trim().uppercase()
+        val hogar =
+            try {
+                hogarRepository.findByCodigoHogar(codigo)
+                    ?: throw HogarNotFoundException(codigo)
+            } catch (e: HogarNotFoundException) {
+                limitadorUnirse.registrarFallo(clave)
+                throw e
+            }
+
+        usuario.hogar = hogar
+        hogar.usuarios.add(usuario)
+        limitadorUnirse.reiniciar(clave)
         return hogar.toResponse()
     }
 
     @Transactional(readOnly = true)
     fun obtenerHogar(codigoHogar: String): HogarResponse {
+        val codigo = codigoHogar.trim().uppercase()
         val hogar =
-            hogarRepository.findByCodigoHogar(codigoHogar)
+            hogarRepository.findByCodigoHogar(codigo)
                 ?: throw HogarNotFoundException(codigoHogar)
+
+        // Responder 404 también a quien no es miembro, igual que si el código no existiera,
+        // evita revelar qué códigos de hogar son válidos
+        if (usuarioActualService.usuarioActual().hogar?.id != hogar.id) {
+            throw HogarNotFoundException(codigoHogar)
+        }
         return hogar.toResponse()
+    }
+
+    // 10 caracteres de un alfabeto de 32 símbolos dan 50 bits de entropía
+    private fun generarCodigoUnico(): String {
+        repeat(MAX_INTENTOS_CODIGO) {
+            val codigo =
+                CharArray(LONGITUD_CODIGO) { ALFABETO[random.nextInt(ALFABETO.length)] }
+                    .concatToString()
+            if (!hogarRepository.existsByCodigoHogar(codigo)) return codigo
+        }
+        error("No fue posible generar un código de hogar único")
     }
 
     private fun Hogar.toResponse(): HogarResponse =
         HogarResponse(
-            id = id!!,
+            id = checkNotNull(id),
             nombre = nombre,
             codigoHogar = codigoHogar,
-            // usuarios se accede dentro de @Transactional para evitar LazyInitializationException
-            usuarios = usuarios.map { UsuarioResponse(id = it.id!!, nombre = it.nombre) },
+            usuarios =
+                usuarios
+                    .distinctBy { it.id }
+                    .map { UsuarioResponse(id = checkNotNull(it.id), nombre = it.nombre) },
         )
+
+    private companion object {
+        const val ALFABETO = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789" // sin 0/O/1/I, que se confunden al transcribir
+        const val LONGITUD_CODIGO = 10
+        const val MAX_INTENTOS_CODIGO = 5
+        val random = SecureRandom()
+    }
 }
