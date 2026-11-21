@@ -1,13 +1,12 @@
 package com.foodhelp.api.controller
 
-import com.foodhelp.api.models.Alerta
-import com.foodhelp.api.models.Hogar
-import com.foodhelp.api.models.Usuario
-import com.foodhelp.api.repository.AlertaRepository
+import com.foodhelp.api.config.Paginacion
+import com.foodhelp.api.dto.AlertaResponse
 import com.foodhelp.api.repository.UsuarioRepository
 import com.foodhelp.api.security.JwtService
+import com.foodhelp.api.security.UsuarioActualService
+import com.foodhelp.api.service.AlertaService
 import org.junit.jupiter.api.Test
-import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import org.springframework.beans.factory.annotation.Autowired
@@ -22,7 +21,6 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.time.LocalDate
-import java.util.Optional
 import java.util.UUID
 
 @WebMvcTest(AlertaController::class)
@@ -32,46 +30,44 @@ class AlertaControllerTest {
     private lateinit var mockMvc: MockMvc
 
     @MockitoBean
-    private lateinit var alertaRepository: AlertaRepository
+    private lateinit var alertaService: AlertaService
 
     @MockitoBean
-    private lateinit var usuarioRepository: UsuarioRepository
+    private lateinit var usuarioActualService: UsuarioActualService
 
     @MockitoBean
     private lateinit var jwtService: JwtService
 
-    private val testEmail = "usuario@foodhelp.com"
+    @MockitoBean
+    private lateinit var usuarioRepository: UsuarioRepository
+
     private val hogarId = UUID.randomUUID()
-    private val hogar = Hogar(id = hogarId, nombre = "Hogar Alertas", codigoHogar = "ALERT-01")
-    private val usuario = Usuario(nombre = "Maria", correo = testEmail, contrasena = "pass123", hogar = hogar)
 
     @Test
-    @WithMockUser(username = "usuario@foodhelp.com")
+    @WithMockUser
     fun `Test 1 - recuperacion de la lista de alertas del hogar con HTTP 200`() {
-        `when`(usuarioRepository.findByCorreo(testEmail)).thenReturn(usuario)
+        `when`(usuarioActualService.hogarIdActual()).thenReturn(hogarId)
 
         val alerta1 =
-            Alerta(
+            AlertaResponse(
                 id = UUID.randomUUID(),
                 articuloId = UUID.randomUUID(),
                 nombreProducto = "Leche Entera",
                 diasRestantes = 2,
-                hogarId = hogarId,
                 leida = false,
                 fechaCreacion = LocalDate.now(),
             )
         val alerta2 =
-            Alerta(
+            AlertaResponse(
                 id = UUID.randomUUID(),
                 articuloId = UUID.randomUUID(),
                 nombreProducto = "Yogur de Frutilla",
                 diasRestantes = 5,
-                hogarId = hogarId,
                 leida = true,
                 fechaCreacion = LocalDate.now().minusDays(1),
             )
 
-        `when`(alertaRepository.findByHogarIdOrderByFechaCreacionDesc(hogarId))
+        `when`(alertaService.listarPorHogar(hogarId, 0, Paginacion.TAMANO_POR_DEFECTO))
             .thenReturn(listOf(alerta1, alerta2))
 
         mockMvc
@@ -88,32 +84,22 @@ class AlertaControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "usuario@foodhelp.com")
+    @WithMockUser
     fun `Test 2 - actualizacion del estado de lectura con PATCH a leida true`() {
         val alertaId = UUID.randomUUID()
-        val alertaOriginal =
-            Alerta(
+        `when`(usuarioActualService.hogarIdActual()).thenReturn(hogarId)
+
+        val alertaModificada =
+            AlertaResponse(
                 id = alertaId,
                 articuloId = UUID.randomUUID(),
                 nombreProducto = "Pan Lactal",
                 diasRestantes = 1,
-                hogarId = hogarId,
-                leida = false,
+                leida = true,
                 fechaCreacion = LocalDate.now(),
             )
-        val alertaModificada =
-            Alerta(
-                id = alertaId,
-                articuloId = alertaOriginal.articuloId,
-                nombreProducto = "Pan Lactal",
-                diasRestantes = 1,
-                hogarId = hogarId,
-                leida = true,
-                fechaCreacion = alertaOriginal.fechaCreacion,
-            )
 
-        `when`(alertaRepository.findById(alertaId)).thenReturn(Optional.of(alertaOriginal))
-        `when`(alertaRepository.save(any(Alerta::class.java))).thenReturn(alertaModificada)
+        `when`(alertaService.marcarComoLeida(alertaId, hogarId)).thenReturn(alertaModificada)
 
         mockMvc
             .perform(
@@ -124,24 +110,23 @@ class AlertaControllerTest {
             .andExpect(jsonPath("$.leida").value(true))
             .andExpect(jsonPath("$.nombreProducto").value("Pan Lactal"))
 
-        verify(alertaRepository).save(any(Alerta::class.java))
+        verify(alertaService).marcarComoLeida(alertaId, hogarId)
     }
 
     @Test
-    @WithMockUser(username = "usuario@foodhelp.com")
+    @WithMockUser
     fun `Test 3 - endpoint GET por hogarId directo retorna notificaciones ordenadas`() {
         val alerta =
-            Alerta(
+            AlertaResponse(
                 id = UUID.randomUUID(),
                 articuloId = UUID.randomUUID(),
                 nombreProducto = "Huevos",
                 diasRestantes = 4,
-                hogarId = hogarId,
                 leida = false,
                 fechaCreacion = LocalDate.now(),
             )
 
-        `when`(alertaRepository.findByHogarIdOrderByFechaCreacionDesc(hogarId))
+        `when`(alertaService.listarPorHogar(hogarId, 0, Paginacion.TAMANO_POR_DEFECTO))
             .thenReturn(listOf(alerta))
 
         mockMvc
@@ -151,5 +136,7 @@ class AlertaControllerTest {
             ).andExpect(status().isOk)
             .andExpect(jsonPath("$.length()").value(1))
             .andExpect(jsonPath("$[0].nombreProducto").value("Huevos"))
+
+        verify(usuarioActualService).exigirPertenenciaAHogar(hogarId)
     }
 }
