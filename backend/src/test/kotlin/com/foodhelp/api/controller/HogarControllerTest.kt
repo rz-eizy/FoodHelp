@@ -162,5 +162,4 @@ class HogarControllerTest {
         assertFalse(hogarRepository.existsById(hogar.id!!))
         assertFalse(articuloRepository.existsById(articulo.id!!))
     }
-
 }
