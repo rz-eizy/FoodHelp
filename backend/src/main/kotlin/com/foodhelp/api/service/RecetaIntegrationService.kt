@@ -3,49 +3,58 @@ package com.foodhelp.api.service
 import com.foodhelp.api.dto.RecetaExternaDTO
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.cache.annotation.Cacheable
 import org.springframework.core.ParameterizedTypeReference
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Service
 import org.springframework.web.client.RestClient
+import org.springframework.web.client.RestClientException
 import org.springframework.web.client.RestClientResponseException
 
 @Service
 class RecetaIntegrationService(
     restClientBuilder: RestClient.Builder,
-    @Value("\${spoonacular.api.key:test-api-key}")
-    private val apiKey: String,
-    @Value("\${spoonacular.api.base-url:https://api.spoonacular.com}")
-    private val baseUrl: String = "https://api.spoonacular.com",
+    @Value("\${spoonacular.api.key}") apiKey: String,
+    @Value("\${spoonacular.api.base-url:https://api.spoonacular.com}") baseUrl: String,
 ) {
     private val log = LoggerFactory.getLogger(RecetaIntegrationService::class.java)
-    private val restClient = restClientBuilder.baseUrl(baseUrl).build()
 
+    // La clave viaja en cabecera: no aparece en la URL ni en los mensajes de excepción
+    private val restClient =
+        restClientBuilder
+            .baseUrl(baseUrl)
+            .defaultHeader("x-api-key", apiKey)
+            .build()
+
+    @Cacheable(cacheNames = ["recetas"], key = "#p0.toString()", unless = "#result.isEmpty()")
     fun obtenerRecetasPorIngredientes(ingredientes: List<String>): List<RecetaExternaDTO> {
-        if (ingredientes.isEmpty()) {
-            return emptyList()
-        }
+        if (ingredientes.isEmpty()) return emptyList()
 
         return try {
-            val lista =
-                restClient
-                    .get()
-                    .uri { uriBuilder ->
-                        uriBuilder
-                            .path("/recipes/findByIngredients")
-                            .queryParam("ingredients", ingredientes.joinToString(","))
-                            .queryParam("apiKey", apiKey)
-                            .build()
-                    }.accept(MediaType.APPLICATION_JSON)
-                    .retrieve()
-                    .body(object : ParameterizedTypeReference<List<RecetaExternaDTO>>() {})
-
-            lista ?: emptyList()
+            restClient
+                .get()
+                .uri { uriBuilder ->
+                    uriBuilder
+                        .path("/recipes/findByIngredients")
+                        .queryParam("ingredients", ingredientes.joinToString(","))
+                        .queryParam("number", MAX_RECETAS)
+                        .build()
+                }.accept(MediaType.APPLICATION_JSON)
+                .retrieve()
+                .body(object : ParameterizedTypeReference<List<RecetaExternaDTO>>() {})
+                ?: emptyList()
         } catch (ex: RestClientResponseException) {
-            log.error("Error de respuesta HTTP al consultar Spoonacular (${ex.statusCode}): ${ex.message}")
+            // Se registra solo el estado HTTP, nunca la URL
+            log.error("Spoonacular respondió con HTTP {}", ex.statusCode.value())
             emptyList()
-        } catch (ex: Exception) {
-            log.error("Excepción al consultar API de recetas Spoonacular: ${ex.message}", ex)
+        } catch (ex: RestClientException) {
+            // Timeouts, DNS, conexión rechazada, JSON ilegible...
+            log.error("Fallo al consultar Spoonacular: {}", ex.javaClass.simpleName)
             emptyList()
         }
+    }
+
+    private companion object {
+        const val MAX_RECETAS = 10
     }
 }

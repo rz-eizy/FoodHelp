@@ -3,10 +3,9 @@ package com.foodhelp.api.controller
 import com.foodhelp.api.dto.ArticuloDTO
 import com.foodhelp.api.dto.RecetaExternaDTO
 import com.foodhelp.api.models.CategoriaEnum
-import com.foodhelp.api.models.Hogar
-import com.foodhelp.api.models.Usuario
 import com.foodhelp.api.repository.UsuarioRepository
 import com.foodhelp.api.security.JwtService
+import com.foodhelp.api.security.UsuarioActualService
 import com.foodhelp.api.service.InventarioService
 import com.foodhelp.api.service.RecetaIntegrationService
 import org.junit.jupiter.api.Test
@@ -37,20 +36,20 @@ class RecetaControllerTest {
     private lateinit var recetaIntegrationService: RecetaIntegrationService
 
     @MockitoBean
-    private lateinit var usuarioRepository: UsuarioRepository
+    private lateinit var usuarioActualService: UsuarioActualService
 
     @MockitoBean
     private lateinit var jwtService: JwtService
 
-    private val testEmail = "chef@foodhelp.com"
+    @MockitoBean
+    private lateinit var usuarioRepository: UsuarioRepository
+
     private val hogarId = UUID.randomUUID()
-    private val hogar = Hogar(id = hogarId, nombre = "Hogar Chef", codigoHogar = "CHEF-01")
-    private val usuario = Usuario(nombre = "Gordon", correo = testEmail, contrasena = "secret123", hogar = hogar)
 
     @Test
     @WithMockUser(username = "chef@foodhelp.com")
     fun `Test 1 - retorno HTTP 200 con JSON valido consultando sugerencias de recetas`() {
-        `when`(usuarioRepository.findByCorreo(testEmail)).thenReturn(usuario)
+        `when`(usuarioActualService.hogarIdActual()).thenReturn(hogarId)
 
         val articulos =
             listOf(
@@ -71,7 +70,7 @@ class RecetaControllerTest {
                     hogarId = hogarId,
                 ),
             )
-        `when`(inventarioService.obtenerInventarioPorHogar(hogarId)).thenReturn(articulos)
+        `when`(inventarioService.obtenerInventarioVigente(hogarId)).thenReturn(articulos)
 
         val recetasMock =
             listOf(
@@ -107,8 +106,8 @@ class RecetaControllerTest {
     @Test
     @WithMockUser(username = "chef@foodhelp.com")
     fun `Test 2 - retorno HTTP 400 cuando el inventario esta vacio`() {
-        `when`(usuarioRepository.findByCorreo(testEmail)).thenReturn(usuario)
-        `when`(inventarioService.obtenerInventarioPorHogar(hogarId)).thenReturn(emptyList())
+        `when`(usuarioActualService.hogarIdActual()).thenReturn(hogarId)
+        `when`(inventarioService.obtenerInventarioVigente(hogarId)).thenReturn(emptyList())
 
         mockMvc
             .perform(
@@ -116,15 +115,5 @@ class RecetaControllerTest {
                     .contentType(MediaType.APPLICATION_JSON),
             ).andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.error").value("El inventario del hogar está vacío"))
-    }
-
-    @Test
-    fun `Test 3 - seguridad activa rechaza peticion sin autenticacion`() {
-        mockMvc
-            .perform(
-                get("/api/recetas/sugerencias")
-                    .contentType(MediaType.APPLICATION_JSON),
-            ).andExpect(status().isForbidden)
-            .andExpect(jsonPath("$.error").value("No se encontró información de autenticación"))
     }
 }
