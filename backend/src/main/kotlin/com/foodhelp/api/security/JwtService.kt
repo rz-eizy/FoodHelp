@@ -1,59 +1,65 @@
 package com.foodhelp.api.security
 
 import io.jsonwebtoken.Claims
+import io.jsonwebtoken.JwtException
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.SignatureAlgorithm
 import io.jsonwebtoken.security.Keys
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import java.nio.charset.StandardCharsets
-import java.security.Key
 import java.util.Date
+import javax.crypto.SecretKey
 
 @Service
 class JwtService(
-    @Value("\${jwt.secret:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}")
-    private val secretKey: String = "404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970",
-    @Value("\${jwt.expiration:86400000}")
-    private val jwtExpiration: Long = 86400000L,
+    @Value("\${jwt.secret}") secret: String,
+    @Value("\${jwt.expiration:86400000}") private val jwtExpiration: Long,
 ) {
+    private val signingKey: SecretKey =
+        secret.toByteArray(StandardCharsets.UTF_8).let { bytes ->
+            require(bytes.size >= MIN_SECRET_BYTES) {
+                "jwt.secret debe tener al menos $MIN_SECRET_BYTES bytes (256 bits)."
+            }
+            Keys.hmacShaKeyFor(bytes)
+        }
+
     @JvmOverloads
     fun generateToken(
         username: String,
         extraClaims: Map<String, Any> = emptyMap(),
     ): String {
         val now = Date()
-        val expiryDate = Date(now.time + jwtExpiration)
-
         return Jwts
             .builder()
             .setClaims(extraClaims)
             .setSubject(username)
             .setIssuedAt(now)
-            .setExpiration(expiryDate)
-            .signWith(getSigningKey(), SignatureAlgorithm.HS256)
+            .setExpiration(Date(now.time + jwtExpiration))
+            .signWith(signingKey, SignatureAlgorithm.HS256)
             .compact()
     }
 
-    fun extractUsername(token: String): String? = extractClaim(token, Claims::getSubject)
+    fun extractUsername(token: String): String? = extractAllClaims(token)?.subject
+
+    fun extractTokenVersion(token: String): Int? = extractAllClaims(token)?.get("tv", Int::class.javaObjectType)
 
     fun <T> extractClaim(
         token: String,
         claimsResolver: (Claims) -> T,
-    ): T? {
-        val claims = extractAllClaims(token) ?: return null
-        return claimsResolver(claims)
-    }
+    ): T? = extractAllClaims(token)?.let(claimsResolver)
 
     fun extractAllClaims(token: String): Claims? =
         try {
             Jwts
                 .parserBuilder()
-                .setSigningKey(getSigningKey())
+                .setSigningKey(signingKey)
                 .build()
                 .parseClaimsJws(token)
                 .body
-        } catch (e: Exception) {
+        } catch (e: JwtException) {
+            null
+        } catch (e: IllegalArgumentException) {
             null
         }
 
@@ -61,17 +67,13 @@ class JwtService(
         token: String,
         username: String,
     ): Boolean {
-        val extractedUsername = extractUsername(token) ?: return false
-        return extractedUsername == username && !isTokenExpired(token)
+        val claims = extractAllClaims(token) ?: return false
+        return claims.subject == username && claims.expiration?.after(Date()) == true
     }
 
-    fun isTokenExpired(token: String): Boolean {
-        val expiration = extractClaim(token, Claims::getExpiration) ?: return true
-        return expiration.before(Date())
-    }
+    fun isTokenExpired(token: String): Boolean = extractAllClaims(token)?.expiration?.before(Date()) ?: true
 
-    private fun getSigningKey(): Key {
-        val keyBytes = secretKey.toByteArray(StandardCharsets.UTF_8)
-        return Keys.hmacShaKeyFor(keyBytes)
+    private companion object {
+        const val MIN_SECRET_BYTES = 32
     }
 }

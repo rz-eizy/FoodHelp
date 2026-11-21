@@ -1,6 +1,8 @@
 package com.foodhelp.api.service
 
+import com.foodhelp.api.dto.LoginRequest
 import com.foodhelp.api.dto.RegistroRequest
+import com.foodhelp.api.exception.CredencialesInvalidasException
 import com.foodhelp.api.exception.UsuarioYaExisteException
 import com.foodhelp.api.models.Usuario
 import com.foodhelp.api.repository.UsuarioRepository
@@ -32,11 +34,18 @@ class AuthServiceTest {
     @Mock
     private lateinit var jwtService: JwtService
 
+    private val limitadorLogin =
+        com.foodhelp.api.security.LimitadorIntentos(
+            maxIntentos = 10,
+            ventana = java.time.Duration.ofMinutes(5),
+        )
+
     private lateinit var authService: AuthService
 
     @BeforeEach
     fun setUp() {
-        authService = AuthService(usuarioRepository, passwordEncoder, jwtService)
+        limitadorLogin.limpiarTodo()
+        authService = AuthService(usuarioRepository, passwordEncoder, jwtService, limitadorLogin)
     }
 
     @Test
@@ -52,14 +61,13 @@ class AuthServiceTest {
 
         `when`(usuarioRepository.existsByCorreo(request.correo)).thenReturn(false)
         `when`(passwordEncoder.encode(request.contrasena)).thenReturn(contrasenaHasheada)
-        `when`(jwtService.generateToken(request.correo)).thenReturn(jwtEsperado)
+        `when`(usuarioRepository.save(any(Usuario::class.java))).thenAnswer { it.arguments[0] as Usuario }
+        `when`(jwtService.generateToken(request.correo, mapOf("tv" to 0))).thenReturn(jwtEsperado)
 
         val response = authService.registrar(request)
 
-        // 1. Verifica que se invocó el encoder con la contraseña plana
         verify(passwordEncoder).encode("clavePlana123")
 
-        // 2. Captura el usuario persistido y comprueba que tiene la contraseña hasheada y no en texto plano
         val usuarioCaptor = ArgumentCaptor.forClass(Usuario::class.java)
         verify(usuarioRepository).save(usuarioCaptor.capture())
 
@@ -68,7 +76,6 @@ class AuthServiceTest {
         assertEquals("carlos@example.com", usuarioGuardado.correo)
         assertEquals(contrasenaHasheada, usuarioGuardado.contrasena)
 
-        // 3. Comprueba el retorno del JWT válido
         assertNotNull(response.token)
         assertEquals(jwtEsperado, response.token)
     }
@@ -88,9 +95,54 @@ class AuthServiceTest {
             authService.registrar(request)
         }
 
-        // Verifica que no se guarde nada en el repositorio ni se encripte
         verify(usuarioRepository, never()).save(any())
         verify(passwordEncoder, never()).encode(anyString())
         org.mockito.Mockito.verifyNoInteractions(jwtService)
+    }
+
+    @Test
+    fun `login exitoso con credenciales validas retorna token JWT`() {
+        val request = LoginRequest(correo = "carlos@example.com", contrasena = "clave123")
+        val usuario =
+            Usuario(
+                nombre = "Carlos",
+                contrasena = "hash-valido",
+                correo = "carlos@example.com",
+            )
+        `when`(usuarioRepository.findByCorreo("carlos@example.com")).thenReturn(usuario)
+        `when`(passwordEncoder.matches("clave123", "hash-valido")).thenReturn(true)
+        `when`(jwtService.generateToken("carlos@example.com", mapOf("tv" to 0))).thenReturn("jwt-token-login")
+
+        val response = authService.login(request)
+        assertEquals("jwt-token-login", response.token)
+    }
+
+    @Test
+    fun `login con correo inexistente lanza CredencialesInvalidasException`() {
+        val request = LoginRequest(correo = "desconocido@example.com", contrasena = "clave123")
+        `when`(usuarioRepository.findByCorreo("desconocido@example.com")).thenReturn(null)
+        `when`(passwordEncoder.encode(anyString())).thenReturn("hash-ficticio")
+        `when`(passwordEncoder.matches(anyString(), anyString())).thenReturn(false)
+
+        assertThrows<CredencialesInvalidasException> {
+            authService.login(request)
+        }
+    }
+
+    @Test
+    fun `login con contrasena incorrecta lanza CredencialesInvalidasException`() {
+        val request = LoginRequest(correo = "carlos@example.com", contrasena = "clave-erronea")
+        val usuario =
+            Usuario(
+                nombre = "Carlos",
+                contrasena = "hash-valido",
+                correo = "carlos@example.com",
+            )
+        `when`(usuarioRepository.findByCorreo("carlos@example.com")).thenReturn(usuario)
+        `when`(passwordEncoder.matches("clave-erronea", "hash-valido")).thenReturn(false)
+
+        assertThrows<CredencialesInvalidasException> {
+            authService.login(request)
+        }
     }
 }
