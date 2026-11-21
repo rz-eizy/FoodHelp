@@ -6,6 +6,6 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 data class RecetaExternaDTO(
     val id: Int,
     val title: String,
-    val image: String,
-    val missedIngredientCount: Int,
+    val image: String? = null,
+    val missedIngredientCount: Int = 0,
 )

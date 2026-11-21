@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.test.context.TestPropertySource
 import org.springframework.test.web.client.MockRestServiceServer
+import org.springframework.test.web.client.match.MockRestRequestMatchers.header
 import org.springframework.test.web.client.match.MockRestRequestMatchers.method
 import org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo
 import org.springframework.test.web.client.response.MockRestResponseCreators.withStatus
@@ -74,15 +75,15 @@ class RecetaIntegrationServiceTest {
     }
 
     @Test
-    fun `Test 3 - verifica que la URL generada contenga los ingredientes delimitados por comas y la API Key`() {
+    fun `Test 3 - verifica que la URL contenga los ingredientes delimitados por comas y que la API Key viaje en cabecera`() {
         val ingredientes = listOf("huevo", "leche", "harina")
         val expectedIngredientsParam = "huevo,leche,harina"
         val expectedApiKey = "api_key_test_123"
 
         server
             .expect(requestTo(containsString("ingredients=$expectedIngredientsParam")))
-            .andExpect(requestTo(containsString("apiKey=$expectedApiKey")))
             .andExpect(method(HttpMethod.GET))
+            .andExpect(header("x-api-key", expectedApiKey))
             .andRespond(withSuccess("[]", MediaType.APPLICATION_JSON))
 
         val resultado = recetaIntegrationService.obtenerRecetasPorIngredientes(ingredientes)
