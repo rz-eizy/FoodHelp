@@ -1,5 +1,6 @@
 package com.foodhelp.api.security
 
+import com.foodhelp.api.repository.UsuarioRepository
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
@@ -12,6 +13,7 @@ import org.springframework.web.filter.OncePerRequestFilter
 @Component
 class JwtAuthenticationFilter(
     private val jwtService: JwtService,
+    private val usuarioRepository: UsuarioRepository,
 ) : OncePerRequestFilter() {
     override fun doFilterInternal(
         request: HttpServletRequest,
@@ -29,14 +31,18 @@ class JwtAuthenticationFilter(
 
         if (username != null && SecurityContextHolder.getContext().authentication == null) {
             if (jwtService.isTokenValid(jwt, username)) {
-                val authToken =
-                    UsernamePasswordAuthenticationToken(
-                        username,
-                        null,
-                        emptyList(),
-                    )
-                authToken.details = WebAuthenticationDetailsSource().buildDetails(request)
-                SecurityContextHolder.getContext().authentication = authToken
+                val usuario = usuarioRepository.findByCorreo(username)
+                val tokenVersion = jwtService.extractTokenVersion(jwt)
+                if (usuario != null && tokenVersion != null && tokenVersion == usuario.tokenVersion) {
+                    val authToken =
+                        UsernamePasswordAuthenticationToken(
+                            username,
+                            null,
+                            emptyList(),
+                        )
+                    authToken.details = WebAuthenticationDetailsSource().buildDetails(request)
+                    SecurityContextHolder.getContext().authentication = authToken
+                }
             }
         }
 

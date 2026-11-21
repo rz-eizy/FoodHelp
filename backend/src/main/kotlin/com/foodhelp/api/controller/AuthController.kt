@@ -1,12 +1,12 @@
 package com.foodhelp.api.controller
 
 import com.foodhelp.api.dto.AuthResponse
+import com.foodhelp.api.dto.LoginRequest
 import com.foodhelp.api.dto.RegistroRequest
-import com.foodhelp.api.exception.UsuarioYaExisteException
 import com.foodhelp.api.service.AuthService
+import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
-import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -19,15 +19,11 @@ class AuthController(
 ) {
     @PostMapping("/registro")
     fun registro(
-        @RequestBody request: RegistroRequest,
-    ): ResponseEntity<AuthResponse> {
-        val response = authService.registrar(request)
-        return ResponseEntity.status(HttpStatus.CREATED).body(response)
-    }
+        @Valid @RequestBody request: RegistroRequest,
+    ): ResponseEntity<AuthResponse> = ResponseEntity.status(HttpStatus.CREATED).body(authService.registrar(request))
 
-    @ExceptionHandler(UsuarioYaExisteException::class)
-    fun handleUsuarioYaExiste(e: UsuarioYaExisteException): ResponseEntity<Map<String, String>> =
-        ResponseEntity.status(HttpStatus.CONFLICT).body(
-            mapOf("error" to (e.message ?: "Usuario ya existe")),
-        )
+    @PostMapping("/login")
+    fun login(
+        @Valid @RequestBody request: LoginRequest,
+    ): ResponseEntity<AuthResponse> = ResponseEntity.ok(authService.login(request))
 }
