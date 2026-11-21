@@ -2,14 +2,13 @@ server:
   port: ${PORT:8080}
 
 spring:
-  config:
-    activate:
-      on-profile: prod
   datasource:
     url: ${POSTGRES_URL}
     username: ${POSTGRES_USER}
     password: ${POSTGRES_PASSWORD}
     driver-class-name: org.postgresql.Driver
+  flyway:
+    enabled: true
   jpa:
     hibernate:
       ddl-auto: validate
@@ -18,20 +17,30 @@ spring:
     properties:
       hibernate:
         '[format_sql]': false
-        dialect: org.hibernate.dialect.PostgreSQLDialect
 
 jwt:
-  secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
-  expiration: ${JWT_EXPIRATION:86400000}
+  secret: ${JWT_SECRET}
+  expiration: ${JWT_EXPIRATION:604800000}
+
 
 spoonacular:
   api:
-    key: ${SPOONACULAR_API_KEY:}
+    key: ${SPOONACULAR_API_KEY} # obligatorio en prod
     base-url: ${SPOONACULAR_BASE_URL:https://api.spoonacular.com}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
 
 logging:
   level:
     root: INFO
-    com.foodhelp.api: INFO
-    org.hibernate.SQL: ERROR
-    org.hibernate.type.descriptor.sql: ERROR
+    '[com.foodhelp.api]': INFO
+    '[org.hibernate.SQL]': ERROR
+    '[org.hibernate.type.descriptor.sql]': ERROR
