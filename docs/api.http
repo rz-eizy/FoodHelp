@@ -1,0 +1,200 @@
+### FoodHelp API - Colección de Peticiones HTTP
+### Compatible con REST Client (VS Code) y HTTP Client (IntelliJ IDEA)
+
+@baseUrl = http://localhost:8080
+@token = eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhbmFAZWplbXBsby5jb20iLCJ0diI6MCwiaWF0IjoxNzAwMDAwMDAwLCJleHAiOjE3MDA2MDQ4MDB9.dummySignature
+
+###############################################################################
+# 1. MONITOREO Y SALUD
+###############################################################################
+
+### 1.1. Health Check
+# No requiere autenticación. Responde 200 OK {"status": "UP"}.
+GET {{baseUrl}}/actuator/health
+
+###############################################################################
+# 2. AUTENTICACIÓN
+###############################################################################
+
+### 2.1. Registro de nuevo usuario
+# Crea un usuario y devuelve token JWT con claim tv=0.
+# HTTP 201 Created -> {"token": "...", "tipo": "Bearer"}
+POST {{baseUrl}}/api/auth/registro
+Content-Type: application/json
+
+{
+  "nombre": "Ana Gómez",
+  "correo": "ana@ejemplo.com",
+  "contrasena": "MiPasswordSeguro123"
+}
+
+### 2.2. Login de usuario
+# Autentica credenciales y emite nuevo JWT. Sujeto a rate limit (10 fallos / 5 min).
+# HTTP 200 OK -> {"token": "...", "tipo": "Bearer"}
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "correo": "ana@ejemplo.com",
+  "contrasena": "MiPasswordSeguro123"
+}
+
+###############################################################################
+# 3. USUARIOS
+###############################################################################
+
+### 3.1. Obtener perfil del usuario autenticado
+# Requiere Authorization: Bearer <token>.
+# HTTP 200 OK -> {"id": "...", "nombre": "...", "correo": "...", "hogar": {...}|null}
+GET {{baseUrl}}/api/usuarios/me
+Authorization: Bearer {{token}}
+
+### 3.2. Cerrar sesión (Logout)
+# Incrementa tokenVersion del usuario, invalidando de inmediato el token actual.
+# HTTP 204 No Content. Peticiones posteriores con este token darán 401 Unauthorized.
+POST {{baseUrl}}/api/usuarios/me/logout
+Authorization: Bearer {{token}}
+
+###############################################################################
+# 4. HOGARES
+###############################################################################
+
+### 4.1. Crear un nuevo hogar
+# El usuario pasa a ser el primer miembro del hogar. Falla si ya tiene hogar (409 Conflict).
+# HTTP 201 Created -> {"id": "...", "nombre": "...", "codigoHogar": "...", "usuarios": [...]}
+POST {{baseUrl}}/api/hogares
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nombre": "Casa de Campo"
+}
+
+### 4.2. Obtener hogar por código de invitación
+# Solo accesible para miembros del hogar. Si no existe o no es miembro, responde 404 Not Found.
+# HTTP 200 OK -> {"id": "...", "nombre": "...", "codigoHogar": "...", "usuarios": [...]}
+GET {{baseUrl}}/api/hogares/K7W9MNP2QR
+Authorization: Bearer {{token}}
+
+### 4.3. Unirse a un hogar con código de invitación
+# Une al usuario autenticado al hogar. Sujeto a rate limit (10 fallos / 10 min).
+# HTTP 200 OK -> HogarResponse
+POST {{baseUrl}}/api/hogares/unirse
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "codigoHogar": "K7W9MNP2QR"
+}
+
+### 4.4. Salir del hogar actual
+# Desvincula al usuario. Si era el último miembro, elimina el hogar y su inventario.
+# HTTP 204 No Content. Si no pertenecía a ningún hogar, responde 409 Conflict.
+POST {{baseUrl}}/api/hogares/salir
+Authorization: Bearer {{token}}
+
+###############################################################################
+# 5. INVENTARIO
+###############################################################################
+
+### 5.1. Listar inventario del hogar del usuario (por defecto: page=0, size=50)
+# Ordenado por fecha de vencimiento ascendente.
+# HTTP 200 OK -> [{"id": "...", "nombre": "...", ...}]
+GET {{baseUrl}}/api/inventario
+Authorization: Bearer {{token}}
+
+### 5.2. Listar inventario con paginación personalizada (máximo size=100)
+GET {{baseUrl}}/api/inventario?page=0&size=20
+Authorization: Bearer {{token}}
+
+### 5.3. Listar inventario por hogarId
+# Requiere que el usuario pertenezca a dicho hogar; de lo contrario responde 403 Forbidden.
+@hogarId = e4b9d032-124b-4a5f-9562-b9e7bdfa1832
+GET {{baseUrl}}/api/inventario/hogar/{{hogarId}}?page=0&size=50
+Authorization: Bearer {{token}}
+
+### 5.4. Agregar nuevo artículo al inventario
+# Categorías válidas: LACTEOS, CARNES, VEGETALES, FRUTAS, BEBIDAS, PANADERIA, DESPENSA, CONGELADOS, OTROS.
+# fechaVencimiento debe ser formato YYYY-MM-DD y fecha presente o futura.
+# HTTP 201 Created -> ArticuloDTO
+POST {{baseUrl}}/api/inventario
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nombre": "Leche Descremada 1L",
+  "fechaVencimiento": "2026-12-31",
+  "cantidad": 2,
+  "categoria": "LACTEOS"
+}
+
+### 5.5. Actualizar artículo parcialmente (PATCH)
+# articuloId debe ser UUID del artículo. Se puede modificar nombre, fechaVencimiento, cantidad, categoria.
+# La cantidad 0 se conserva en el inventario; use DELETE para eliminar el artículo.
+# HTTP 200 OK -> ArticuloDTO actualizado
+@articuloId = 1a2b3c4d-0000-0000-0000-000000000001
+PATCH {{baseUrl}}/api/inventario/{{articuloId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nombre": "Leche Descremada Sin Lactosa",
+  "cantidad": 3
+}
+
+### 5.6. Restar cantidad a un artículo (vía Body)
+# La cantidad restante 0 se conserva en el inventario; use DELETE para eliminar el artículo.
+# HTTP 200 OK -> ArticuloDTO
+PATCH {{baseUrl}}/api/inventario/{{articuloId}}/restar
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "cantidad": 1
+}
+
+### 5.7. Restar cantidad a un artículo (vía Query Param)
+PATCH {{baseUrl}}/api/inventario/{{articuloId}}/restar?cantidad=1
+Authorization: Bearer {{token}}
+
+### 5.8. Eliminar artículo del inventario
+# Elimina el artículo y sus alertas asociadas.
+# HTTP 204 No Content
+DELETE {{baseUrl}}/api/inventario/{{articuloId}}
+Authorization: Bearer {{token}}
+
+###############################################################################
+# 6. ALERTAS
+###############################################################################
+
+### 6.1. Listar alertas del hogar actual
+# Alertas automáticas para artículos con 3 o menos días de vigencia restante.
+# HTTP 200 OK -> [{"id": "...", "articuloId": "...", "diasRestantes": 2, "leida": false, ...}]
+GET {{baseUrl}}/api/alertas
+Authorization: Bearer {{token}}
+
+### 6.2. Listar alertas con paginación
+GET {{baseUrl}}/api/alertas?page=0&size=10
+Authorization: Bearer {{token}}
+
+### 6.3. Listar alertas por hogarId
+# Requiere pertenencia al hogar (403 si es ajeno).
+GET {{baseUrl}}/api/alertas/hogar/{{hogarId}}?page=0&size=50
+Authorization: Bearer {{token}}
+
+### 6.4. Marcar alerta como leída
+# HTTP 200 OK -> AlertaResponse con leida: true
+@alertaId = 8b5d0c73-4567-4890-abcd-112233445566
+PATCH {{baseUrl}}/api/alertas/{{alertaId}}/leida
+Authorization: Bearer {{token}}
+
+###############################################################################
+# 7. RECETAS SUGERIDAS (SPOONACULAR)
+###############################################################################
+
+### 7.1. Obtener sugerencias de recetas basadas en inventario vigente
+# Toma hasta 3 ingredientes más próximos a caducar. Cache de 6 horas.
+# HTTP 200 OK -> [{"id": 12345, "title": "...", "image": "...", "missedIngredientCount": 1}]
+# Si el inventario del hogar está vacío -> HTTP 400 Bad Request {"error": "El inventario del hogar está vacío"}
+GET {{baseUrl}}/api/recetas/sugerencias
+Authorization: Bearer {{token}}
