@@ -1,19 +1,20 @@
 package com.foodhelp.api.controller
 
+import com.foodhelp.api.config.Paginacion
+import com.foodhelp.api.dto.ActualizarArticuloRequest
 import com.foodhelp.api.dto.ArticuloDTO
-import com.foodhelp.api.exception.AccesoDenegadoException
-import com.foodhelp.api.exception.CantidadInsuficienteException
-import com.foodhelp.api.repository.UsuarioRepository
+import com.foodhelp.api.dto.CrearArticuloRequest
+import com.foodhelp.api.dto.RestarCantidadRequest
+import com.foodhelp.api.security.UsuarioActualService
 import com.foodhelp.api.service.InventarioService
+import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
-import org.springframework.security.core.Authentication
-import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.web.bind.annotation.DeleteMapping
-import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
@@ -24,57 +25,60 @@ import java.util.UUID
 @RequestMapping("/api/inventario")
 class InventarioController(
     private val inventarioService: InventarioService,
-    private val usuarioRepository: UsuarioRepository,
+    private val usuarioActualService: UsuarioActualService,
 ) {
+    @GetMapping
+    fun obtenerMiInventario(
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "${Paginacion.TAMANO_POR_DEFECTO}") size: Int,
+    ): ResponseEntity<List<ArticuloDTO>> =
+        ResponseEntity.ok(
+            inventarioService.obtenerInventarioPaginado(usuarioActualService.hogarIdActual(), page, size),
+        )
+
     @GetMapping("/hogar/{hogarId}")
     fun obtenerInventarioPorHogar(
         @PathVariable hogarId: UUID,
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "${Paginacion.TAMANO_POR_DEFECTO}") size: Int,
     ): ResponseEntity<List<ArticuloDTO>> {
-        val inventario = inventarioService.obtenerInventarioPorHogar(hogarId)
-        return ResponseEntity.ok(inventario)
+        usuarioActualService.exigirPertenenciaAHogar(hogarId)
+        return ResponseEntity.ok(inventarioService.obtenerInventarioPaginado(hogarId, page, size))
+    }
+
+    @PostMapping
+    fun crearArticulo(
+        @Valid @RequestBody request: CrearArticuloRequest,
+    ): ResponseEntity<ArticuloDTO> {
+        val hogarId = usuarioActualService.hogarIdActual()
+        return ResponseEntity.status(HttpStatus.CREATED).body(inventarioService.crearArticulo(hogarId, request))
     }
 
     @PatchMapping("/{articuloId}/restar")
     fun restarCantidad(
         @PathVariable articuloId: UUID,
         @RequestParam(required = false) cantidad: Int?,
-        @RequestBody(required = false) body: Map<String, Int>?,
+        @Valid @RequestBody(required = false) body: RestarCantidadRequest?,
     ): ResponseEntity<ArticuloDTO> {
-        val cantidadFinal = cantidad ?: body?.get("cantidad") ?: 1
-        val articuloActualizado = inventarioService.restarCantidad(articuloId, cantidadFinal)
-        return ResponseEntity.ok(articuloActualizado)
+        val cantidadFinal = cantidad ?: body?.cantidad ?: 1
+        val hogarId = usuarioActualService.hogarIdActual()
+        return ResponseEntity.ok(inventarioService.restarCantidad(articuloId, hogarId, cantidadFinal))
+    }
+
+    @PatchMapping("/{articuloId}")
+    fun actualizarArticulo(
+        @PathVariable articuloId: UUID,
+        @Valid @RequestBody request: ActualizarArticuloRequest,
+    ): ResponseEntity<ArticuloDTO> {
+        val hogarId = usuarioActualService.hogarIdActual()
+        return ResponseEntity.ok(inventarioService.actualizarArticulo(articuloId, hogarId, request))
     }
 
     @DeleteMapping("/{articuloId}")
     fun eliminarArticulo(
         @PathVariable articuloId: UUID,
-        authentication: Authentication? = null,
     ): ResponseEntity<Void> {
-        val auth =
-            authentication ?: SecurityContextHolder.getContext().authentication
-                ?: throw AccesoDenegadoException("No se encontró información de autenticación")
-
-        val usuario =
-            usuarioRepository.findByCorreo(auth.name)
-                ?: throw AccesoDenegadoException("Usuario autenticado no encontrado en el sistema")
-
-        val hogarId =
-            usuario.hogar?.id
-                ?: throw AccesoDenegadoException("El usuario autenticado no está asociado a ningún hogar")
-
-        inventarioService.eliminarArticulo(articuloId, hogarId)
+        inventarioService.eliminarArticulo(articuloId, usuarioActualService.hogarIdActual())
         return ResponseEntity.noContent().build()
     }
-
-    @ExceptionHandler(CantidadInsuficienteException::class)
-    fun handleCantidadInsuficiente(e: CantidadInsuficienteException): ResponseEntity<Map<String, String>> =
-        ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
-            mapOf("error" to (e.message ?: "Operación inválida: saldo negativo")),
-        )
-
-    @ExceptionHandler(AccesoDenegadoException::class)
-    fun handleAccesoDenegado(e: AccesoDenegadoException): ResponseEntity<Map<String, String>> =
-        ResponseEntity.status(HttpStatus.FORBIDDEN).body(
-            mapOf("error" to (e.message ?: "Acceso Denegado")),
-        )
 }

@@ -1,12 +1,12 @@
 package com.foodhelp.api.controller
 
+import com.foodhelp.api.config.Paginacion
 import com.foodhelp.api.dto.ArticuloDTO
 import com.foodhelp.api.exception.CantidadInsuficienteException
 import com.foodhelp.api.models.CategoriaEnum
-import com.foodhelp.api.models.Hogar
-import com.foodhelp.api.models.Usuario
 import com.foodhelp.api.repository.UsuarioRepository
 import com.foodhelp.api.security.JwtService
+import com.foodhelp.api.security.UsuarioActualService
 import com.foodhelp.api.service.InventarioService
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.verify
@@ -36,10 +36,13 @@ class InventarioControllerTest {
     private lateinit var inventarioService: InventarioService
 
     @MockitoBean
-    private lateinit var usuarioRepository: UsuarioRepository
+    private lateinit var usuarioActualService: UsuarioActualService
 
     @MockitoBean
     private lateinit var jwtService: JwtService
+
+    @MockitoBean
+    private lateinit var usuarioRepository: UsuarioRepository
 
     @Test
     @WithMockUser
@@ -65,7 +68,7 @@ class InventarioControllerTest {
                 ),
             )
 
-        `when`(inventarioService.obtenerInventarioPorHogar(hogarId)).thenReturn(articulos)
+        `when`(inventarioService.obtenerInventarioPaginado(hogarId, 0, Paginacion.TAMANO_POR_DEFECTO)).thenReturn(articulos)
 
         mockMvc
             .perform(
@@ -77,15 +80,19 @@ class InventarioControllerTest {
             .andExpect(jsonPath("$[0].cantidad").value(4))
             .andExpect(jsonPath("$[1].nombre").value("Pechuga de Pollo"))
             .andExpect(jsonPath("$[1].cantidad").value(2))
+
+        verify(usuarioActualService).exigirPertenenciaAHogar(hogarId)
     }
 
     @Test
     @WithMockUser
     fun `Test 2 - validar estado HTTP 400 cuando el servicio lanza excepcion por unidades negativas`() {
         val articuloId = UUID.randomUUID()
+        val hogarId = UUID.randomUUID()
         val cantidadARestar = 10
 
-        `when`(inventarioService.restarCantidad(articuloId, cantidadARestar))
+        `when`(usuarioActualService.hogarIdActual()).thenReturn(hogarId)
+        `when`(inventarioService.restarCantidad(articuloId, hogarId, cantidadARestar))
             .thenThrow(CantidadInsuficienteException("La deducción excede el stock actual disponible"))
 
         mockMvc
@@ -93,25 +100,15 @@ class InventarioControllerTest {
                 patch("/api/inventario/$articuloId/restar")
                     .param("cantidad", cantidadARestar.toString()),
             ).andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.error").exists())
     }
 
     @Test
-    @WithMockUser(username = "chef@foodhelp.com")
+    @WithMockUser
     fun `Test 3 - confirmar estado HTTP 204 No Content al eliminar con exito`() {
         val articuloId = UUID.randomUUID()
         val hogarId = UUID.randomUUID()
-        val email = "chef@foodhelp.com"
-        val hogar = Hogar(id = hogarId, nombre = "Hogar Chef", codigoHogar = "CHEF-01")
-        val usuario =
-            Usuario(
-                nombre = "Gordon",
-                correo = email,
-                contrasena = "secret123",
-                hogar = hogar,
-            )
 
-        `when`(usuarioRepository.findByCorreo(email)).thenReturn(usuario)
+        `when`(usuarioActualService.hogarIdActual()).thenReturn(hogarId)
 
         mockMvc
             .perform(
