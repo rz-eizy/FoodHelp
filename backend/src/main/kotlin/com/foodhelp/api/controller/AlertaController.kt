@@ -1,71 +1,43 @@
 package com.foodhelp.api.controller
 
-import com.foodhelp.api.exception.AccesoDenegadoException
-import com.foodhelp.api.models.Alerta
-import com.foodhelp.api.repository.AlertaRepository
-import com.foodhelp.api.repository.UsuarioRepository
-import org.springframework.http.HttpStatus
+import com.foodhelp.api.config.Paginacion
+import com.foodhelp.api.dto.AlertaResponse
+import com.foodhelp.api.security.UsuarioActualService
+import com.foodhelp.api.service.AlertaService
 import org.springframework.http.ResponseEntity
-import org.springframework.security.core.Authentication
-import org.springframework.security.core.context.SecurityContextHolder
-import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
-import org.springframework.web.server.ResponseStatusException
 import java.util.UUID
 
 @RestController
 @RequestMapping("/api/alertas")
 class AlertaController(
-    private val alertaRepository: AlertaRepository,
-    private val usuarioRepository: UsuarioRepository,
+    private val alertaService: AlertaService,
+    private val usuarioActualService: UsuarioActualService,
 ) {
     @GetMapping
-    fun obtenerAlertasDelHogar(authentication: Authentication? = null): ResponseEntity<List<Alerta>> {
-        val auth =
-            authentication ?: SecurityContextHolder.getContext().authentication
-                ?: throw AccesoDenegadoException("No se encontró información de autenticación")
-
-        val usuario =
-            usuarioRepository.findByCorreo(auth.name)
-                ?: throw AccesoDenegadoException("Usuario autenticado no encontrado en el sistema")
-
-        val hogarId =
-            usuario.hogar?.id
-                ?: throw AccesoDenegadoException("El usuario autenticado no está asociado a ningún hogar")
-
-        val alertas = alertaRepository.findByHogarIdOrderByFechaCreacionDesc(hogarId)
-        return ResponseEntity.ok(alertas)
-    }
+    fun obtenerAlertasDelHogar(
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "${Paginacion.TAMANO_POR_DEFECTO}") size: Int,
+    ): ResponseEntity<List<AlertaResponse>> =
+        ResponseEntity.ok(alertaService.listarPorHogar(usuarioActualService.hogarIdActual(), page, size))
 
     @GetMapping("/hogar/{hogarId}")
     fun obtenerAlertasPorHogarId(
         @PathVariable hogarId: UUID,
-    ): ResponseEntity<List<Alerta>> {
-        val alertas = alertaRepository.findByHogarIdOrderByFechaCreacionDesc(hogarId)
-        return ResponseEntity.ok(alertas)
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "${Paginacion.TAMANO_POR_DEFECTO}") size: Int,
+    ): ResponseEntity<List<AlertaResponse>> {
+        usuarioActualService.exigirPertenenciaAHogar(hogarId)
+        return ResponseEntity.ok(alertaService.listarPorHogar(hogarId, page, size))
     }
 
     @PatchMapping("/{id}/leida")
     fun marcarComoLeida(
         @PathVariable id: UUID,
-    ): ResponseEntity<Alerta> {
-        val alerta =
-            alertaRepository
-                .findById(id)
-                .orElseThrow { ResponseStatusException(HttpStatus.NOT_FOUND, "Alerta no encontrada con ID: $id") }
-
-        alerta.leida = true
-        val alertaActualizada = alertaRepository.save(alerta)
-        return ResponseEntity.ok(alertaActualizada)
-    }
-
-    @ExceptionHandler(AccesoDenegadoException::class)
-    fun handleAccesoDenegado(e: AccesoDenegadoException): ResponseEntity<Map<String, String>> =
-        ResponseEntity.status(HttpStatus.FORBIDDEN).body(
-            mapOf("error" to (e.message ?: "Acceso Denegado")),
-        )
+    ): ResponseEntity<AlertaResponse> = ResponseEntity.ok(alertaService.marcarComoLeida(id, usuarioActualService.hogarIdActual()))
 }

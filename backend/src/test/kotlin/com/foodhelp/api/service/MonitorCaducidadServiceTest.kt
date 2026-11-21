@@ -19,7 +19,10 @@ import org.mockito.Mock
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import org.mockito.junit.jupiter.MockitoExtension
+import java.time.Clock
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import java.util.UUID
 
 @ExtendWith(MockitoExtension::class)
@@ -33,6 +36,10 @@ class MonitorCaducidadServiceTest {
     @Mock
     private lateinit var alertaRepository: AlertaRepository
 
+    private val fixedInstant = Instant.parse("2026-10-25T10:00:00Z")
+    private val clock = Clock.fixed(fixedInstant, ZoneId.of("UTC"))
+    private val hoy = LocalDate.now(clock)
+
     private lateinit var monitorCaducidadService: MonitorCaducidadService
 
     private val hogarId = UUID.randomUUID()
@@ -41,6 +48,11 @@ class MonitorCaducidadServiceTest {
     private fun anyLocalDate(): LocalDate {
         any<LocalDate>()
         return LocalDate.now()
+    }
+
+    private fun anyCollection(): Collection<UUID> {
+        any<Collection<UUID>>()
+        return emptyList()
     }
 
     private fun captureList(captor: ArgumentCaptor<List<String>>): List<String> {
@@ -55,12 +67,17 @@ class MonitorCaducidadServiceTest {
 
     @BeforeEach
     fun setUp() {
-        monitorCaducidadService = MonitorCaducidadService(articuloRepository, recetaIntegrationService, alertaRepository)
+        monitorCaducidadService =
+            MonitorCaducidadService(
+                articuloRepository,
+                recetaIntegrationService,
+                alertaRepository,
+                clock,
+            )
     }
 
     @Test
     fun `Test 1 - verifica que recetaIntegrationService es llamado con los ingredientes criticos correctos`() {
-        val hoy = LocalDate.now()
         val articulo1 =
             ArticuloDespensa(
                 id = UUID.randomUUID(),
@@ -80,9 +97,9 @@ class MonitorCaducidadServiceTest {
                 hogar = hogar,
             )
 
-        // Pasamos en orden inverso de vencimiento para comprobar ordenamiento
-        `when`(articuloRepository.findByFechaVencimientoBetween(anyLocalDate(), anyLocalDate()))
+        `when`(articuloRepository.findPorVencerConHogar(anyLocalDate(), anyLocalDate()))
             .thenReturn(listOf(articulo2, articulo1))
+        `when`(alertaRepository.findByArticuloIdIn(anyCollection())).thenReturn(emptyList())
 
         val recetaMock =
             listOf(
@@ -103,7 +120,6 @@ class MonitorCaducidadServiceTest {
 
     @Test
     fun `Test 2 - comprueba que la lista de ingredientes nunca supere el limite de 3 items cuando hay 10 productos`() {
-        val hoy = LocalDate.now()
         val articulos =
             (1..10).map { i ->
                 ArticuloDespensa(
@@ -116,8 +132,9 @@ class MonitorCaducidadServiceTest {
                 )
             }
 
-        `when`(articuloRepository.findByFechaVencimientoBetween(anyLocalDate(), anyLocalDate()))
+        `when`(articuloRepository.findPorVencerConHogar(anyLocalDate(), anyLocalDate()))
             .thenReturn(articulos)
+        `when`(alertaRepository.findByArticuloIdIn(anyCollection())).thenReturn(emptyList())
 
         @Suppress("UNCHECKED_CAST")
         val captor = ArgumentCaptor.forClass(List::class.java) as ArgumentCaptor<List<String>>
@@ -132,29 +149,17 @@ class MonitorCaducidadServiceTest {
     }
 
     @Test
-    fun `Test 3 - logica de frontera ignora productos que vencen en mas de 10 dias`() {
-        val hoy = LocalDate.now()
-        val articulo30Dias =
-            ArticuloDespensa(
-                id = UUID.randomUUID(),
-                nombre = "Arroz Integral",
-                fechaVencimiento = hoy.plusDays(30),
-                cantidad = 5,
-                categoria = CategoriaEnum.DESPENSA,
-                hogar = hogar,
-            )
-
-        `when`(articuloRepository.findByFechaVencimientoBetween(anyLocalDate(), anyLocalDate()))
-            .thenReturn(listOf(articulo30Dias))
+    fun `Test 3 - logica de frontera ignora productos cuando la consulta no devuelve articulos`() {
+        `when`(articuloRepository.findPorVencerConHogar(anyLocalDate(), anyLocalDate()))
+            .thenReturn(emptyList())
 
         val alertas = monitorCaducidadService.ejecutarMonitoreo()
 
-        assertTrue(alertas.isEmpty(), "Los productos con más de 10 días no deben procesarse")
+        assertTrue(alertas.isEmpty(), "Si no hay productos por vencer no deben generarse alertas")
     }
 
     @Test
     fun `Test 4 - verifica que los productos por caducar se persisten como entidades Alerta en la base de datos`() {
-        val hoy = LocalDate.now()
         val articulo =
             ArticuloDespensa(
                 id = UUID.randomUUID(),
@@ -165,8 +170,9 @@ class MonitorCaducidadServiceTest {
                 hogar = hogar,
             )
 
-        `when`(articuloRepository.findByFechaVencimientoBetween(anyLocalDate(), anyLocalDate()))
+        `when`(articuloRepository.findPorVencerConHogar(anyLocalDate(), anyLocalDate()))
             .thenReturn(listOf(articulo))
+        `when`(alertaRepository.findByArticuloIdIn(anyCollection())).thenReturn(emptyList())
 
         @Suppress("UNCHECKED_CAST")
         val captor = ArgumentCaptor.forClass(List::class.java) as ArgumentCaptor<List<Alerta>>
@@ -184,5 +190,45 @@ class MonitorCaducidadServiceTest {
         assertEquals(hogarId, alerta.hogarId)
         assertFalse(alerta.leida)
         assertEquals(hoy, alerta.fechaCreacion)
+    }
+
+    @Test
+    fun `Test 5 - idempotencia actualiza diasRestantes sin duplicar alerta si ya existe`() {
+        val articuloId = UUID.randomUUID()
+        val articulo =
+            ArticuloDespensa(
+                id = articuloId,
+                nombre = "Leche",
+                fechaVencimiento = hoy.plusDays(2),
+                cantidad = 1,
+                categoria = CategoriaEnum.LACTEOS,
+                hogar = hogar,
+            )
+        val alertaExistente =
+            Alerta(
+                id = UUID.randomUUID(),
+                articuloId = articuloId,
+                nombreProducto = "Leche",
+                diasRestantes = 3,
+                hogarId = hogarId,
+                fechaCreacion = hoy.minusDays(1),
+            )
+
+        `when`(articuloRepository.findPorVencerConHogar(anyLocalDate(), anyLocalDate()))
+            .thenReturn(listOf(articulo))
+        `when`(alertaRepository.findByArticuloIdIn(anyCollection()))
+            .thenReturn(listOf(alertaExistente))
+
+        @Suppress("UNCHECKED_CAST")
+        val captor = ArgumentCaptor.forClass(List::class.java) as ArgumentCaptor<List<Alerta>>
+
+        val resultado = monitorCaducidadService.ejecutarMonitoreo()
+
+        assertEquals(1, resultado.size)
+        verify(alertaRepository).saveAll(captureAlertaList(captor))
+        val alertasGuardadas = captor.value
+        assertEquals(1, alertasGuardadas.size)
+        assertEquals(alertaExistente.id, alertasGuardadas.first().id)
+        assertEquals(2, alertasGuardadas.first().diasRestantes)
     }
 }

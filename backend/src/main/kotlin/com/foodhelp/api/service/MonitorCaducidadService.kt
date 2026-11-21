@@ -2,11 +2,13 @@ package com.foodhelp.api.service
 
 import com.foodhelp.api.dto.AlertaDTO
 import com.foodhelp.api.models.Alerta
+import com.foodhelp.api.models.ArticuloDespensa
 import com.foodhelp.api.repository.AlertaRepository
 import com.foodhelp.api.repository.ArticuloRepository
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
+import java.time.Clock
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 
@@ -15,85 +17,90 @@ class MonitorCaducidadService(
     private val articuloRepository: ArticuloRepository,
     private val recetaIntegrationService: RecetaIntegrationService,
     private val alertaRepository: AlertaRepository,
+    private val clock: Clock,
 ) {
     private val log = LoggerFactory.getLogger(MonitorCaducidadService::class.java)
 
-    @Scheduled(cron = "0 0 8 * * ?")
+    // El cron y el cálculo de fechas comparten la zona configurable; la JVM corre en UTC
+    @Scheduled(cron = "\${app.monitor.cron:0 0 8 * * ?}", zone = "\${app.zona-horaria:UTC}")
     fun ejecutarMonitoreo(): List<AlertaDTO> {
-        val hoy = LocalDate.now()
-        val fechaLimite = hoy.plusDays(10)
+        val hoy = LocalDate.now(clock)
+        val fechaLimite = hoy.plusDays(DIAS_ANTICIPACION)
 
-        log.info("Iniciando monitoreo diario de caducidad para articulos entre $hoy y $fechaLimite")
+        log.info("Iniciando monitoreo diario de caducidad para articulos entre {} y {}", hoy, fechaLimite)
 
-        val articulosPorVencer = articuloRepository.findByFechaVencimientoBetween(hoy, fechaLimite)
+        // Solo artículos con stock y con el hogar cargado para evitar consultas N+1
+        val articulos = articuloRepository.findPorVencerConHogar(hoy, fechaLimite)
+        if (articulos.isEmpty()) return emptyList()
 
-        val articulosValidos =
-            articulosPorVencer.filter { articulo ->
-                val fecha = articulo.fechaVencimiento ?: return@filter false
-                val dias = ChronoUnit.DAYS.between(hoy, fecha)
-                dias in 0..10
-            }
-
-        val alertasEntidades =
-            articulosValidos.map { articulo ->
-                val fecha = articulo.fechaVencimiento!!
-                val diasRestantes = ChronoUnit.DAYS.between(hoy, fecha).toInt()
-                Alerta(
-                    articuloId = articulo.id!!,
-                    nombreProducto = articulo.nombre,
-                    diasRestantes = diasRestantes,
-                    hogarId = articulo.hogar.id!!,
-                    fechaCreacion = hoy,
-                    leida = false,
-                )
-            }
-
-        if (alertasEntidades.isNotEmpty()) {
-            alertaRepository.saveAll(alertasEntidades)
-        }
+        // Una alerta por artículo: se actualiza la existente en lugar de duplicarla
+        val existentes =
+            alertaRepository
+                .findByArticuloIdIn(articulos.mapNotNull { it.id })
+                .associateBy { it.articuloId }
 
         val alertas =
-            articulosValidos.map { articulo ->
-                val fecha = articulo.fechaVencimiento!!
-                val diasRestantes = ChronoUnit.DAYS.between(hoy, fecha)
+            articulos.mapNotNull { articulo ->
+                val articuloId = articulo.id ?: return@mapNotNull null
+                val vencimiento = articulo.fechaVencimiento ?: return@mapNotNull null
+                val dias = ChronoUnit.DAYS.between(hoy, vencimiento).toInt()
+
+                existentes[articuloId]?.apply { diasRestantes = dias }
+                    ?: Alerta(
+                        articuloId = articuloId,
+                        nombreProducto = articulo.nombre,
+                        diasRestantes = dias,
+                        hogarId = checkNotNull(articulo.hogar.id),
+                        fechaCreacion = hoy,
+                    )
+            }
+        alertaRepository.saveAll(alertas)
+
+        val alertasDto =
+            alertas.map {
                 AlertaDTO(
-                    articuloId = articulo.id!!,
-                    nombreProducto = articulo.nombre,
-                    diasRestantes = diasRestantes,
-                    hogarId = articulo.hogar.id!!,
+                    articuloId = it.articuloId,
+                    nombreProducto = it.nombreProducto,
+                    diasRestantes = it.diasRestantes.toLong(),
+                    hogarId = it.hogarId,
                 )
             }
-
-        alertas.forEach { alerta ->
-            log.warn(
-                "ALERTA CADUCIDAD: El producto '{}' (ID: {}) del hogar {} vence en {} días.",
-                alerta.nombreProducto,
-                alerta.articuloId,
-                alerta.hogarId,
-                alerta.diasRestantes,
+        alertasDto.forEach {
+            log.info(
+                "ALERTA CADUCIDAD: El producto '{}' vence en {} días.",
+                it.nombreProducto,
+                it.diasRestantes,
             )
         }
 
-        val articulosPorHogar = articulosValidos.groupBy { it.hogar.id!! }
+        sugerirRecetasPorHogar(articulos)
+        return alertasDto
+    }
 
-        articulosPorHogar.forEach { (hogarId, articulosDelHogar) ->
+    private fun sugerirRecetasPorHogar(articulos: List<ArticuloDespensa>) {
+        articulos.groupBy { checkNotNull(it.hogar.id) }.forEach { (hogarId, delHogar) ->
             val ingredientesCriticos =
-                articulosDelHogar
+                delHogar
                     .sortedBy { it.fechaVencimiento }
-                    .take(3)
+                    .take(MAX_INGREDIENTES)
                     .map { it.nombre }
 
-            val recetasSugeridas = recetaIntegrationService.obtenerRecetasPorIngredientes(ingredientesCriticos)
-            val titulosRecetas = recetasSugeridas.map { it.title }
+            val titulos =
+                recetaIntegrationService
+                    .obtenerRecetasPorIngredientes(ingredientesCriticos)
+                    .map { it.title }
 
             log.info(
                 "Hogar ID: {} | Ingredientes críticos: {} | Recetas sugeridas: {}",
                 hogarId,
                 ingredientesCriticos,
-                titulosRecetas,
+                titulos,
             )
         }
+    }
 
-        return alertas
+    private companion object {
+        const val DIAS_ANTICIPACION = 10L
+        const val MAX_INGREDIENTES = 3
     }
 }
