@@ -13,6 +13,7 @@ import com.foodhelp.api.security.JwtService
 import com.foodhelp.api.security.tokenParaUsuario
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
@@ -124,6 +125,24 @@ class HogarControllerTest {
     }
 
     @Test
+    fun `Test 4 - usuario con hogar sale responde 204 y luego inventario responde 403`() {
+        val hogar = hogarRepository.save(Hogar(nombre = "Hogar Salir", codigoHogar = "SALIR12345"))
+        val usuario =
+            usuarioRepository.save(
+                Usuario(nombre = "Mario", contrasena = "pass123", correo = "mario@test.com", hogar = hogar),
+            )
+        val token = "Bearer " + jwtService.tokenParaUsuario(usuario)
+
+        mockMvc
+            .perform(post("/api/hogares/salir").header("Authorization", token))
+            .andExpect(status().isNoContent)
+
+        mockMvc
+            .perform(get("/api/inventario").header("Authorization", token))
+            .andExpect(status().isForbidden)
+    }
+
+    @Test
     fun `Test 5 - usuario sin hogar al llamar salir responde 409`() {
         val usuario =
             usuarioRepository.save(
@@ -162,5 +181,30 @@ class HogarControllerTest {
 
         assertFalse(hogarRepository.existsById(hogar.id!!))
         assertFalse(articuloRepository.existsById(articulo.id!!))
+    }
+
+    @Test
+    fun `Test 7 - si habia otro miembro el hogar sigue existiendo y el otro usuario conserva su acceso`() {
+        val hogar = hogarRepository.save(Hogar(nombre = "Hogar Compartido", codigoHogar = "COMP123456"))
+        val user1 =
+            usuarioRepository.save(
+                Usuario(nombre = "User1", contrasena = "pass123", correo = "user1@test.com", hogar = hogar),
+            )
+        val user2 =
+            usuarioRepository.save(
+                Usuario(nombre = "User2", contrasena = "pass123", correo = "user2@test.com", hogar = hogar),
+            )
+        val token1 = "Bearer " + jwtService.tokenParaUsuario(user1)
+        val token2 = "Bearer " + jwtService.tokenParaUsuario(user2)
+
+        mockMvc
+            .perform(post("/api/hogares/salir").header("Authorization", token1))
+            .andExpect(status().isNoContent)
+
+        assertTrue(hogarRepository.existsById(hogar.id!!))
+
+        mockMvc
+            .perform(get("/api/inventario").header("Authorization", token2))
+            .andExpect(status().isOk)
     }
 }
