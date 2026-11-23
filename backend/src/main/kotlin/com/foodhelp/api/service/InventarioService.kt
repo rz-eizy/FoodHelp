@@ -60,6 +60,7 @@ class InventarioService(
 
         val fechaVencimiento =
             checkNotNull(request.fechaVencimiento) { "La fecha de vencimiento es obligatoria" }
+        validarFechaVencimiento(fechaVencimiento)
 
         val articulo =
             ArticuloDespensa(
@@ -138,6 +139,8 @@ class InventarioService(
             throw ArticuloNotFoundException(articuloId)
         }
 
+        request.fechaVencimiento?.let { validarFechaVencimiento(it) }
+
         request.nombre?.let { articulo.nombre = it.trim() }
         request.cantidad?.let { articulo.cantidad = it }
         request.categoria?.let { articulo.categoria = it }
@@ -147,5 +150,11 @@ class InventarioService(
         }
 
         return ArticuloDTO.fromEntity(articulo)
+    }
+
+    private fun validarFechaVencimiento(fechaVencimiento: LocalDate) {
+        if (fechaVencimiento.isBefore(LocalDate.now(clock))) {
+            throw SolicitudInvalidaException("La fecha de vencimiento no puede ser anterior a hoy")
+        }
     }
 }

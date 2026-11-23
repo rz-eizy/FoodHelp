@@ -353,4 +353,65 @@ class AccesoEntreHogaresTest {
 
         assertFalse(alertaRepository.existsById(alerta.id!!))
     }
+
+    @Test
+    fun `crear articulo con fecha de ayer responde 400 con error y no altera el inventario`() {
+        val totalAntes = articuloRepository.count()
+
+        mockMvc
+            .perform(
+                post("/api/inventario")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        """
+                        {
+                            "nombre": "Leche",
+                            "fechaVencimiento": "${LocalDate.now().minusDays(1)}",
+                            "cantidad": 2,
+                            "categoria": "LACTEOS"
+                        }
+                        """.trimIndent(),
+                    ).header("Authorization", bearerAna),
+            ).andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.error").value("La fecha de vencimiento no puede ser anterior a hoy"))
+
+        assertEquals(totalAntes, articuloRepository.count())
+    }
+
+    @Test
+    fun `crear articulo con fecha de hoy responde 201`() {
+        mockMvc
+            .perform(
+                post("/api/inventario")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        """
+                        {
+                            "nombre": "Leche",
+                            "fechaVencimiento": "${LocalDate.now()}",
+                            "cantidad": 2,
+                            "categoria": "LACTEOS"
+                        }
+                        """.trimIndent(),
+                    ).header("Authorization", bearerAna),
+            ).andExpect(status().isCreated)
+            .andExpect(jsonPath("$.fechaVencimiento").value(LocalDate.now().toString()))
+    }
+
+    @Test
+    fun `editar fecha de vencimiento a una fecha pasada responde 400 y no cambia el articulo`() {
+        val propio = articulo(hogarPropio, 5)
+        val fechaOriginal = propio.fechaVencimiento
+
+        mockMvc
+            .perform(
+                patch("/api/inventario/${propio.id}")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"fechaVencimiento": "${LocalDate.now().minusDays(1)}"}""")
+                    .header("Authorization", bearerAna),
+            ).andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.error").value("La fecha de vencimiento no puede ser anterior a hoy"))
+
+        assertEquals(fechaOriginal, articuloRepository.findById(propio.id!!).get().fechaVencimiento)
+    }
 }
