@@ -347,18 +347,18 @@ Utilizado para clasificar los artículos del inventario de despensa:
   }
   ```
   - `nombre`: String, obligatorio, máx 120 caracteres.
-  - `fechaVencimiento`: String fecha (`YYYY-MM-DD`), obligatorio, debe ser presente o futura (`@FutureOrPresent`).
+  - `fechaVencimiento`: String fecha (`YYYY-MM-DD`), obligatorio. Debe ser hoy o futura; se valida en el servicio con el `Clock` inyectado (no con `@FutureOrPresent`), por lo que "hoy" es válido en cualquier zona horaria.
   - `cantidad`: Entero, obligatorio, mínimo 1.
   - `categoria`: Enum `CategoriaEnum`, opcional, default `"OTROS"`.
 - **Respuestas:**
   - `201 Created`: `ArticuloDTO` creado.
-  - `400 Bad Request`: Campos inválidos (ej. fecha pasada o cantidad < 1).
+  - `400 Bad Request`: Campos inválidos o fecha de vencimiento anterior a hoy (`SolicitudInvalidaException`: `{"error": "La fecha de vencimiento no puede ser anterior a hoy"}`).
   - `401 Unauthorized`: Token inválido.
   - `403 Forbidden`: Usuario sin hogar.
 
 #### `PATCH /api/inventario/{articuloId}/restar`
 - **Autenticación:** Requerida (`Bearer`).
-- **Descripción:** Disminuye la cantidad de un artículo mediante un `UPDATE` atómico condicional. El artículo permanece en el inventario aunque la cantidad restante sea 0.
+- **Descripción:** Disminuye la cantidad de un artículo mediante un `UPDATE` atómico condicional. Si la cantidad restante llega a 0, el artículo y sus alertas se eliminan, pero la respuesta sigue siendo `200 OK` con `cantidad: 0`.
 - **Parámetros:**
   - Ruta: `articuloId` (UUID).
   - Cantidad a restar: se puede enviar vía Query Param `?cantidad=N` o en el Body `{"cantidad": N}`. Si no se envía ninguno, descuenta `1` por defecto. Mínimo 1.
@@ -369,7 +369,7 @@ Utilizado para clasificar los artículos del inventario de despensa:
   }
   ```
 - **Respuestas:**
-  - `200 OK`: `ArticuloDTO` con la cantidad actualizada.
+  - `200 OK`: `ArticuloDTO` con la cantidad actualizada (si llegó a 0, el artículo ya no existe pero se devuelve con `cantidad: 0`).
   - `400 Bad Request`: Si la cantidad a restar es mayor a la cantidad actual disponible (`CantidadInsuficienteException`) o si `cantidad < 1`.
   - `401 Unauthorized`: Token inválido.
   - `404 Not Found`: Artículo inexistente o perteneciente a otro hogar.
@@ -390,12 +390,12 @@ Utilizado para clasificar los artículos del inventario de despensa:
   ```
   *Todos los campos son opcionales, pero al menos uno debe ser provisto y con valor válido:*
   - `nombre`: String opcional, máx 120 caracteres, no puede ser vacío ni espacios en blanco.
-  - `fechaVencimiento`: String fecha (`YYYY-MM-DD`) opcional. Al actualizar la fecha, cualquier alerta asociada se limpia automáticamente.
-  - `cantidad`: Entero opcional, mínimo 0. El artículo permanece en el inventario aunque se actualice a 0.
+  - `fechaVencimiento`: String fecha (`YYYY-MM-DD`) opcional, hoy o futura (fecha pasada → 400). Al actualizar la fecha, cualquier alerta asociada se limpia automáticamente.
+  - `cantidad`: Entero opcional, mínimo 0. Si se envía `0`, el artículo y sus alertas se eliminan, se responde `200 OK` con `cantidad: 0` y no se aplican los demás campos del cuerpo.
   - `categoria`: Enum `CategoriaEnum` opcional.
 - **Respuestas:**
   - `200 OK`: `ArticuloDTO` actualizado.
-  - `400 Bad Request`: Cuerpo sin cambios válidos (`SolicitudInvalidaException`) o validación fallida (nombre en blanco, cantidad negativa).
+  - `400 Bad Request`: Cuerpo sin cambios válidos, fecha de vencimiento anterior a hoy o validación fallida (nombre en blanco, cantidad negativa); todas son `SolicitudInvalidaException` o errores de validación con `$.error`.
   - `401 Unauthorized`: Token inválido.
   - `404 Not Found`: Artículo inexistente o perteneciente a otro hogar.
   - `404 Not Found`: Artículo no encontrado.

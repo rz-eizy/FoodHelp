@@ -60,6 +60,7 @@ class InventarioService(
 
         val fechaVencimiento =
             checkNotNull(request.fechaVencimiento) { "La fecha de vencimiento es obligatoria" }
+        validarFechaVencimiento(fechaVencimiento)
 
         val articulo =
             ArticuloDespensa(
@@ -100,7 +101,11 @@ class InventarioService(
             articuloRepository
                 .findById(articuloId)
                 .orElseThrow { ArticuloNotFoundException(articuloId) }
-        return ArticuloDTO.fromEntity(actualizado)
+        val respuesta = ArticuloDTO.fromEntity(actualizado)
+        if (actualizado.cantidad == 0) {
+            eliminarArticuloAgotado(actualizado)
+        }
+        return respuesta
     }
 
     @Transactional
@@ -116,7 +121,7 @@ class InventarioService(
         if (articulo.hogar.id != hogarIdUsuario) {
             throw ArticuloNotFoundException(articuloId)
         }
-        articuloRepository.delete(articulo)
+        eliminarArticuloAgotado(articulo)
     }
 
     @Transactional
@@ -138,6 +143,14 @@ class InventarioService(
             throw ArticuloNotFoundException(articuloId)
         }
 
+        request.fechaVencimiento?.let { validarFechaVencimiento(it) }
+
+        if (request.cantidad == 0) {
+            val respuesta = ArticuloDTO.fromEntity(articulo).copy(cantidad = 0)
+            eliminarArticuloAgotado(articulo)
+            return respuesta
+        }
+
         request.nombre?.let { articulo.nombre = it.trim() }
         request.cantidad?.let { articulo.cantidad = it }
         request.categoria?.let { articulo.categoria = it }
@@ -147,5 +160,16 @@ class InventarioService(
         }
 
         return ArticuloDTO.fromEntity(articulo)
+    }
+
+    private fun eliminarArticuloAgotado(articulo: ArticuloDespensa) {
+        articulo.id?.let { alertaRepository.deleteByArticuloId(it) }
+        articuloRepository.delete(articulo)
+    }
+
+    private fun validarFechaVencimiento(fechaVencimiento: LocalDate) {
+        if (fechaVencimiento.isBefore(LocalDate.now(clock))) {
+            throw SolicitudInvalidaException("La fecha de vencimiento no puede ser anterior a hoy")
+        }
     }
 }

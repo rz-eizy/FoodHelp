@@ -1,9 +1,11 @@
 package com.foodhelp.api.service
 
+import com.foodhelp.api.dto.ActualizarArticuloRequest
 import com.foodhelp.api.dto.CrearArticuloRequest
 import com.foodhelp.api.exception.ArticuloNotFoundException
 import com.foodhelp.api.exception.CantidadInsuficienteException
 import com.foodhelp.api.exception.CantidadInvalidaException
+import com.foodhelp.api.exception.SolicitudInvalidaException
 import com.foodhelp.api.models.ArticuloDespensa
 import com.foodhelp.api.models.CategoriaEnum
 import com.foodhelp.api.models.Hogar
@@ -199,6 +201,7 @@ class InventarioServiceTest {
 
         inventarioService.eliminarArticulo(articuloId, hogarId)
 
+        verify(alertaRepository).deleteByArticuloId(articuloId)
         verify(articuloRepository).delete(articulo)
     }
 
@@ -288,5 +291,134 @@ class InventarioServiceTest {
         assertEquals("Manzanas", creado.nombre)
         assertEquals(5, creado.cantidad)
         assertEquals(hogarId, creado.hogarId)
+    }
+
+    @Test
+    fun `crearArticulo rechaza fecha de vencimiento anterior a hoy con Clock fijo`() {
+        val request =
+            CrearArticuloRequest(
+                nombre = "Leche",
+                fechaVencimiento = hoy.minusDays(1),
+                cantidad = 2,
+            )
+
+        `when`(hogarRepository.findById(hogarId)).thenReturn(Optional.of(hogar))
+
+        val excepcion =
+            assertThrows<SolicitudInvalidaException> {
+                inventarioService.crearArticulo(hogarId, request)
+            }
+
+        assertEquals("La fecha de vencimiento no puede ser anterior a hoy", excepcion.message)
+        verify(articuloRepository, never()).save(anyArticulo())
+    }
+
+    @Test
+    fun `crearArticulo acepta fecha de vencimiento igual a hoy con Clock fijo`() {
+        val request =
+            CrearArticuloRequest(
+                nombre = "Leche",
+                fechaVencimiento = hoy,
+                cantidad = 2,
+            )
+        `when`(hogarRepository.findById(hogarId)).thenReturn(Optional.of(hogar))
+        `when`(articuloRepository.save(anyArticulo())).thenAnswer { invocation ->
+            val art = invocation.arguments[0] as ArticuloDespensa
+            ArticuloDespensa(
+                id = UUID.randomUUID(),
+                nombre = art.nombre,
+                fechaVencimiento = art.fechaVencimiento,
+                cantidad = art.cantidad,
+                categoria = art.categoria,
+                hogar = art.hogar,
+            )
+        }
+
+        val creado = inventarioService.crearArticulo(hogarId, request)
+
+        assertEquals(hoy, creado.fechaVencimiento)
+    }
+
+    @Test
+    fun `actualizarArticulo rechaza fecha de vencimiento anterior a hoy y no modifica el articulo`() {
+        val articuloId = UUID.randomUUID()
+        val fechaOriginal = hoy.plusDays(5)
+        val articulo =
+            ArticuloDespensa(
+                id = articuloId,
+                nombre = "Leche",
+                fechaVencimiento = fechaOriginal,
+                cantidad = 4,
+                hogar = hogar,
+            )
+        `when`(articuloRepository.findById(articuloId)).thenReturn(Optional.of(articulo))
+
+        assertThrows<SolicitudInvalidaException> {
+            inventarioService.actualizarArticulo(
+                articuloId,
+                hogarId,
+                ActualizarArticuloRequest(fechaVencimiento = hoy.minusDays(1)),
+            )
+        }
+
+        assertEquals(fechaOriginal, articulo.fechaVencimiento)
+    }
+
+    @Test
+    fun `restarCantidad hasta cero elimina alertas y articulo y devuelve DTO con cantidad cero`() {
+        val articuloId = UUID.randomUUID()
+        val original =
+            ArticuloDespensa(
+                id = articuloId,
+                nombre = "Leche",
+                fechaVencimiento = hoy.plusDays(5),
+                cantidad = 1,
+                hogar = hogar,
+            )
+        val agotado =
+            ArticuloDespensa(
+                id = articuloId,
+                nombre = "Leche",
+                fechaVencimiento = hoy.plusDays(5),
+                cantidad = 0,
+                hogar = hogar,
+            )
+        `when`(articuloRepository.findById(articuloId))
+            .thenReturn(Optional.of(original))
+            .thenReturn(Optional.of(agotado))
+        `when`(articuloRepository.restarCantidadAtomica(articuloId, 1)).thenReturn(1)
+
+        val respuesta = inventarioService.restarCantidad(articuloId, hogarId, 1)
+
+        assertEquals(0, respuesta.cantidad)
+        verify(alertaRepository).deleteByArticuloId(articuloId)
+        verify(articuloRepository).delete(agotado)
+    }
+
+    @Test
+    fun `actualizarArticulo a cantidad cero elimina alertas y articulo sin aplicar otros campos`() {
+        val articuloId = UUID.randomUUID()
+        val articulo =
+            ArticuloDespensa(
+                id = articuloId,
+                nombre = "Leche",
+                fechaVencimiento = hoy.plusDays(5),
+                cantidad = 3,
+                hogar = hogar,
+            )
+        `when`(articuloRepository.findById(articuloId)).thenReturn(Optional.of(articulo))
+
+        val respuesta =
+            inventarioService.actualizarArticulo(
+                articuloId,
+                hogarId,
+                ActualizarArticuloRequest(nombre = "Otro nombre", cantidad = 0),
+            )
+
+        assertEquals(0, respuesta.cantidad)
+        assertEquals("Leche", respuesta.nombre)
+        assertEquals("Leche", articulo.nombre)
+        verify(alertaRepository).deleteByArticuloId(articuloId)
+        verify(articuloRepository).delete(articulo)
     }
 }

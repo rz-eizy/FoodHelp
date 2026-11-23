@@ -2,7 +2,6 @@ package com.foodhelp.api.dto
 
 import com.foodhelp.api.models.ArticuloDespensa
 import com.foodhelp.api.models.CategoriaEnum
-import jakarta.validation.constraints.FutureOrPresent
 import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
@@ -40,7 +39,6 @@ data class CrearArticuloRequest(
     @field:Size(max = 120, message = "El nombre no puede superar 120 caracteres")
     val nombre: String,
     @field:NotNull(message = "La fecha de vencimiento es obligatoria")
-    @field:FutureOrPresent(message = "La fecha de vencimiento no puede ser anterior al día de hoy")
     val fechaVencimiento: LocalDate?,
     @field:Min(value = 1, message = "La cantidad debe ser al menos 1")
     val cantidad: Int,
