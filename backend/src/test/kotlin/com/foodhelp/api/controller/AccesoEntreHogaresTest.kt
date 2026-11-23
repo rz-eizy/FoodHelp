@@ -86,6 +86,18 @@ class AccesoEntreHogaresTest {
         ),
     )
 
+    private fun alertaDe(articulo: ArticuloDespensa) =
+        alertaRepository.save(
+            Alerta(
+                articuloId = articulo.id!!,
+                nombreProducto = articulo.nombre,
+                diasRestantes = 2,
+                hogarId = hogarPropio.id!!,
+                leida = false,
+                fechaCreacion = LocalDate.now(),
+            ),
+        )
+
     @Test
     fun `sin token se responde 401`() {
         mockMvc.perform(get("/api/inventario")).andExpect(status().isUnauthorized)
@@ -413,5 +425,71 @@ class AccesoEntreHogaresTest {
             .andExpect(jsonPath("$.error").value("La fecha de vencimiento no puede ser anterior a hoy"))
 
         assertEquals(fechaOriginal, articuloRepository.findById(propio.id!!).get().fechaVencimiento)
+    }
+
+    @Test
+    fun `restar hasta cero responde 200 con cantidad cero y elimina articulo y alerta`() {
+        val propio = articulo(hogarPropio, 1)
+        val alerta = alertaDe(propio)
+
+        mockMvc
+            .perform(
+                patch("/api/inventario/${propio.id}/restar")
+                    .param("cantidad", "1")
+                    .header("Authorization", bearerAna),
+            ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.cantidad").value(0))
+
+        assertFalse(articuloRepository.existsById(propio.id!!))
+        assertFalse(alertaRepository.existsById(alerta.id!!))
+    }
+
+    @Test
+    fun `actualizar a cantidad cero elimina articulo y alerta y no aplica los demas campos`() {
+        val propio = articulo(hogarPropio, 5)
+        val alerta = alertaDe(propio)
+
+        mockMvc
+            .perform(
+                patch("/api/inventario/${propio.id}")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"nombre": "Hack", "cantidad": 0}""")
+                    .header("Authorization", bearerAna),
+            ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.cantidad").value(0))
+            .andExpect(jsonPath("$.nombre").value("Arroz"))
+
+        assertFalse(articuloRepository.existsById(propio.id!!))
+        assertFalse(alertaRepository.existsById(alerta.id!!))
+    }
+
+    @Test
+    fun `eliminar articulo elimina tambien su alerta`() {
+        val propio = articulo(hogarPropio, 5)
+        val alerta = alertaDe(propio)
+
+        mockMvc
+            .perform(
+                delete("/api/inventario/${propio.id}")
+                    .header("Authorization", bearerAna),
+            ).andExpect(status().isNoContent)
+
+        assertFalse(articuloRepository.existsById(propio.id!!))
+        assertFalse(alertaRepository.existsById(alerta.id!!))
+    }
+
+    @Test
+    fun `restar mas unidades que el stock responde 400 y deja el stock intacto`() {
+        val propio = articulo(hogarPropio, 5)
+
+        mockMvc
+            .perform(
+                patch("/api/inventario/${propio.id}/restar")
+                    .param("cantidad", "6")
+                    .header("Authorization", bearerAna),
+            ).andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.error").exists())
+
+        assertEquals(5, articuloRepository.findById(propio.id!!).get().cantidad)
     }
 }

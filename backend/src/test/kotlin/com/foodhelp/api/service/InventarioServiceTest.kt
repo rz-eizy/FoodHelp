@@ -201,6 +201,7 @@ class InventarioServiceTest {
 
         inventarioService.eliminarArticulo(articuloId, hogarId)
 
+        verify(alertaRepository).deleteByArticuloId(articuloId)
         verify(articuloRepository).delete(articulo)
     }
 
@@ -361,5 +362,63 @@ class InventarioServiceTest {
         }
 
         assertEquals(fechaOriginal, articulo.fechaVencimiento)
+    }
+
+    @Test
+    fun `restarCantidad hasta cero elimina alertas y articulo y devuelve DTO con cantidad cero`() {
+        val articuloId = UUID.randomUUID()
+        val original =
+            ArticuloDespensa(
+                id = articuloId,
+                nombre = "Leche",
+                fechaVencimiento = hoy.plusDays(5),
+                cantidad = 1,
+                hogar = hogar,
+            )
+        val agotado =
+            ArticuloDespensa(
+                id = articuloId,
+                nombre = "Leche",
+                fechaVencimiento = hoy.plusDays(5),
+                cantidad = 0,
+                hogar = hogar,
+            )
+        `when`(articuloRepository.findById(articuloId))
+            .thenReturn(Optional.of(original))
+            .thenReturn(Optional.of(agotado))
+        `when`(articuloRepository.restarCantidadAtomica(articuloId, 1)).thenReturn(1)
+
+        val respuesta = inventarioService.restarCantidad(articuloId, hogarId, 1)
+
+        assertEquals(0, respuesta.cantidad)
+        verify(alertaRepository).deleteByArticuloId(articuloId)
+        verify(articuloRepository).delete(agotado)
+    }
+
+    @Test
+    fun `actualizarArticulo a cantidad cero elimina alertas y articulo sin aplicar otros campos`() {
+        val articuloId = UUID.randomUUID()
+        val articulo =
+            ArticuloDespensa(
+                id = articuloId,
+                nombre = "Leche",
+                fechaVencimiento = hoy.plusDays(5),
+                cantidad = 3,
+                hogar = hogar,
+            )
+        `when`(articuloRepository.findById(articuloId)).thenReturn(Optional.of(articulo))
+
+        val respuesta =
+            inventarioService.actualizarArticulo(
+                articuloId,
+                hogarId,
+                ActualizarArticuloRequest(nombre = "Otro nombre", cantidad = 0),
+            )
+
+        assertEquals(0, respuesta.cantidad)
+        assertEquals("Leche", respuesta.nombre)
+        assertEquals("Leche", articulo.nombre)
+        verify(alertaRepository).deleteByArticuloId(articuloId)
+        verify(articuloRepository).delete(articulo)
     }
 }
