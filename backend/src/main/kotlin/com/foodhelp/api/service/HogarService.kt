@@ -8,6 +8,9 @@ import com.foodhelp.api.exception.HogarNotFoundException
 import com.foodhelp.api.exception.UsuarioSinHogarException
 import com.foodhelp.api.exception.UsuarioYaEnHogarException
 import com.foodhelp.api.models.Hogar
+import com.foodhelp.api.models.Usuario
+import com.foodhelp.api.repository.AlertaRepository
+import com.foodhelp.api.repository.HogarExpulsadoRepository
 import com.foodhelp.api.repository.HogarRepository
 import com.foodhelp.api.repository.UsuarioRepository
 import com.foodhelp.api.security.LimitadorIntentos
@@ -28,20 +31,39 @@ class HogarService(
     @Qualifier("limitadorUnirse")
     private val limitadorUnirse: LimitadorIntentos,
     private val clock: Clock,
+    private val alertaRepository: AlertaRepository,
+    private val hogarExpulsadoRepository: HogarExpulsadoRepository,
 ) {
     @Transactional
     fun salirDelHogar() {
         val usuario = usuarioActualService.usuarioActual()
         val hogar = usuario.hogar ?: throw UsuarioSinHogarException()
+        retirarMiembro(usuario, hogar)
+    }
+
+    private fun retirarMiembro(
+        usuario: Usuario,
+        hogar: Hogar,
+    ): Boolean {
         val hogarId = checkNotNull(hogar.id)
+        val usuarioId = checkNotNull(usuario.id)
+
+        if (hogar.propietarioId == usuarioId) {
+            hogar.propietarioId =
+                usuarioRepository.findFirstByHogarIdAndIdNotOrderByHogarDesdeAscIdAsc(hogarId, usuarioId)?.id
+        }
+
         usuario.hogar = null
+        usuario.hogarDesde = null
         hogar.usuarios.remove(usuario)
         usuarioRepository.saveAndFlush(usuario)
 
-        val restantes = usuarioRepository.countByHogarId(hogarId)
-        if (restantes == 0L) {
-            hogarRepository.delete(hogar)
-        }
+        if (usuarioRepository.countByHogarId(hogarId) != 0L) return false
+
+        alertaRepository.deleteByHogarId(hogarId)
+        hogarExpulsadoRepository.deleteByHogarId(hogarId)
+        hogarRepository.delete(hogar)
+        return true
     }
 
     @Transactional

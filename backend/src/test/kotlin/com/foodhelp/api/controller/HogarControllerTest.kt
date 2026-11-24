@@ -2,16 +2,21 @@ package com.foodhelp.api.controller
 
 import com.foodhelp.api.dto.CreateHogarRequest
 import com.foodhelp.api.dto.JoinHogarRequest
+import com.foodhelp.api.models.Alerta
 import com.foodhelp.api.models.ArticuloDespensa
 import com.foodhelp.api.models.CategoriaEnum
 import com.foodhelp.api.models.Hogar
+import com.foodhelp.api.models.HogarExpulsado
 import com.foodhelp.api.models.Usuario
+import com.foodhelp.api.repository.AlertaRepository
 import com.foodhelp.api.repository.ArticuloRepository
+import com.foodhelp.api.repository.HogarExpulsadoRepository
 import com.foodhelp.api.repository.HogarRepository
 import com.foodhelp.api.repository.UsuarioRepository
 import com.foodhelp.api.security.JwtService
 import com.foodhelp.api.security.tokenParaUsuario
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -24,6 +29,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import java.time.Instant
 import java.time.LocalDate
 
 @SpringBootTest
@@ -46,6 +52,12 @@ class HogarControllerTest {
     private lateinit var articuloRepository: ArticuloRepository
 
     @Autowired
+    private lateinit var alertaRepository: AlertaRepository
+
+    @Autowired
+    private lateinit var hogarExpulsadoRepository: HogarExpulsadoRepository
+
+    @Autowired
     private lateinit var jwtService: JwtService
 
     @org.springframework.beans.factory.annotation.Qualifier("limitadorUnirse")
@@ -59,6 +71,8 @@ class HogarControllerTest {
 
     @AfterEach
     fun limpiar() {
+        alertaRepository.deleteAll()
+        hogarExpulsadoRepository.deleteAll()
         articuloRepository.deleteAll()
         usuarioRepository.deleteAll()
         hogarRepository.deleteAll()
@@ -266,5 +280,128 @@ class HogarControllerTest {
             .perform(get("/api/usuarios/me").header("Authorization", token))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.hogar.esPropietario").value(true))
+    }
+
+    @Test
+    fun `el propietario que sale traspasa la propiedad al integrante mas antiguo`() {
+        val hogar = hogarRepository.save(Hogar(nombre = "Traspaso", codigoHogar = "TRAS123456"))
+        val propietario =
+            usuarioRepository.save(
+                Usuario(
+                    nombre = "Propietario",
+                    contrasena = "pass123",
+                    correo = "propietario@test.com",
+                    hogar = hogar,
+                    hogarDesde = Instant.now().minusSeconds(120),
+                ),
+            )
+        val otro =
+            usuarioRepository.save(
+                Usuario(
+                    nombre = "Otro",
+                    contrasena = "pass123",
+                    correo = "otro-miembro@test.com",
+                    hogar = hogar,
+                    hogarDesde = Instant.now(),
+                ),
+            )
+        hogar.propietarioId = propietario.id
+        hogar.usuarios.addAll(listOf(propietario, otro))
+        hogarRepository.save(hogar)
+
+        mockMvc
+            .perform(post("/api/hogares/salir").header("Authorization", "Bearer " + jwtService.tokenParaUsuario(propietario)))
+            .andExpect(status().isNoContent)
+
+        assertEquals(otro.id, hogarRepository.findById(hogar.id!!).get().propietarioId)
+        mockMvc
+            .perform(get("/api/hogares/TRAS123456").header("Authorization", "Bearer " + jwtService.tokenParaUsuario(otro)))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.esPropietario").value(true))
+    }
+
+    @Test
+    fun `el ultimo integrante al salir elimina hogar articulos alertas y expulsados`() {
+        val hogar = hogarRepository.save(Hogar(nombre = "Ultimo", codigoHogar = "ULTI123456"))
+        val usuario =
+            usuarioRepository.save(
+                Usuario(nombre = "Ultimo", contrasena = "pass123", correo = "ultimo@test.com", hogar = hogar),
+            )
+        val otro =
+            usuarioRepository.save(Usuario(nombre = "Expediente", contrasena = "pass123", correo = "expediente@test.com"))
+        hogar.propietarioId = usuario.id
+        hogarRepository.save(hogar)
+        val articulo =
+            articuloRepository.save(
+                ArticuloDespensa(
+                    nombre = "Manzanas",
+                    fechaVencimiento = LocalDate.now().plusDays(5),
+                    cantidad = 4,
+                    categoria = CategoriaEnum.FRUTAS,
+                    hogar = hogar,
+                ),
+            )
+        val alerta =
+            alertaRepository.save(
+                Alerta(
+                    articuloId = articulo.id!!,
+                    nombreProducto = "Manzanas",
+                    diasRestantes = 2,
+                    hogarId = hogar.id!!,
+                    leida = false,
+                    fechaCreacion = LocalDate.now(),
+                ),
+            )
+        val expulsado =
+            hogarExpulsadoRepository.save(
+                HogarExpulsado(
+                    hogarId = hogar.id!!,
+                    usuarioId = otro.id!!,
+                    expulsadoEn = Instant.now(),
+                ),
+            )
+
+        mockMvc
+            .perform(post("/api/hogares/salir").header("Authorization", "Bearer " + jwtService.tokenParaUsuario(usuario)))
+            .andExpect(status().isNoContent)
+
+        assertFalse(hogarRepository.existsById(hogar.id!!))
+        assertFalse(articuloRepository.existsById(articulo.id!!))
+        assertFalse(alertaRepository.existsById(alerta.id!!))
+        assertFalse(hogarExpulsadoRepository.existsById(expulsado.id!!))
+    }
+
+    @Test
+    fun `al salir un integrante con otro restante el hogar y su inventario se conservan`() {
+        val hogar = hogarRepository.save(Hogar(nombre = "Conservado", codigoHogar = "CONS123456"))
+        val saliente =
+            usuarioRepository.save(
+                Usuario(nombre = "Saliente", contrasena = "pass123", correo = "saliente@test.com", hogar = hogar),
+            )
+        val restante =
+            usuarioRepository.save(
+                Usuario(nombre = "Restante", contrasena = "pass123", correo = "restante@test.com", hogar = hogar),
+            )
+        val articulo =
+            articuloRepository.save(
+                ArticuloDespensa(
+                    nombre = "Pan",
+                    fechaVencimiento = LocalDate.now().plusDays(5),
+                    cantidad = 2,
+                    categoria = CategoriaEnum.PANADERIA,
+                    hogar = hogar,
+                ),
+            )
+
+        mockMvc
+            .perform(post("/api/hogares/salir").header("Authorization", "Bearer " + jwtService.tokenParaUsuario(saliente)))
+            .andExpect(status().isNoContent)
+
+        assertTrue(hogarRepository.existsById(hogar.id!!))
+        assertTrue(articuloRepository.existsById(articulo.id!!))
+        mockMvc
+            .perform(get("/api/inventario").header("Authorization", "Bearer " + jwtService.tokenParaUsuario(restante)))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.length()").value(1))
     }
 }
