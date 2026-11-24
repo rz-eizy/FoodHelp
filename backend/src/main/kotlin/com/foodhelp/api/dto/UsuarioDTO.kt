@@ -6,6 +6,7 @@ data class HogarResumen(
     val id: UUID,
     val nombre: String,
     val codigoHogar: String,
+    val esPropietario: Boolean = false,
 )
 
 data class PerfilResponse(

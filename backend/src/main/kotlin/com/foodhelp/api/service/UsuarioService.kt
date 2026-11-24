@@ -27,6 +27,7 @@ class UsuarioService(
                     id = checkNotNull(it.id),
                     nombre = it.nombre,
                     codigoHogar = it.codigoHogar,
+                    esPropietario = usuario.id == it.propietarioId,
                 )
             }
         return PerfilResponse(
