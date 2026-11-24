@@ -55,6 +55,18 @@ Authorization: Bearer {{token}}
 POST {{baseUrl}}/api/usuarios/me/logout
 Authorization: Bearer {{token}}
 
+### 3.3. Eliminar cuenta (soft delete)
+# IRREVERSIBLE: pedir confirmacion al usuario. Anonimiza datos, invalida todos los tokens
+# y libera el correo. Si era el ultimo integrante, se borra el hogar y su inventario.
+# HTTP 204 No Content. 403 = contrasena incorrecta (NO cerrar sesion). 429 = demasiados intentos.
+POST {{baseUrl}}/api/usuarios/me/eliminar
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "contrasena": "Password123"
+}
+
 ###############################################################################
 # 4. HOGARES
 ###############################################################################

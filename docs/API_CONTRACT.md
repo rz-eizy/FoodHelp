@@ -77,13 +77,13 @@ Producido cuando los campos del cuerpo no cumplen las validaciones Jakarta Valid
 | :--- | :--- | :--- |
 | **200 OK** | Éxito | Operación de lectura o actualización exitosa. |
 | **201 Created** | Creado | Recurso creado exitosamente (registro, nuevo hogar, nuevo artículo). |
-| **204 No Content** | Sin contenido | Operación completada sin cuerpo de retorno (logout, eliminar artículo, salir del hogar). |
+| **204 No Content** | Sin contenido | Operación completada sin cuerpo de retorno (logout, eliminar artículo, salir del hogar, eliminar cuenta). |
 | **400 Bad Request** | Solicitud errónea | JSON malformado, validación de campos fallida, cantidad menor a 1, intentar actualizar artículo sin campos válidos, o inventario vacío al pedir recetas. |
 | **401 Unauthorized** | No autenticado | Token ausente, expirado, inválido, claim `tv` desactualizado, o credenciales erróneas en login. |
-| **403 Forbidden** | Prohibido | Usuario sin hogar asignado o peticiones a rutas con `{hogarId}` de un hogar al que no pertenece. |
+| **403 Forbidden** | Prohibido | Usuario sin hogar asignado, peticiones a rutas con `{hogarId}` de un hogar al que no pertenece, o contraseña incorrecta al eliminar la cuenta. |
 | **404 Not Found** | No encontrado | Recurso inexistente o ajeno: artículo/alerta de otro hogar y `GET /api/hogares/{codigo}` con código inexistente o ajeno (respuesta uniforme por privacidad). |
 | **409 Conflict** | Conflicto | Correo ya registrado, usuario ya pertenece a un hogar, o usuario intenta salir sin pertenecer a un hogar. |
-| **429 Too Many Requests** | Límite excedido | Bloqueo por fuerza bruta (más de 10 intentos fallidos en login o unirse a hogar). |
+| **429 Too Many Requests** | Límite excedido | Bloqueo por fuerza bruta (más de 10 intentos fallidos en login, unirse a hogar o eliminar cuenta). |
 | **500 Internal Server Error** | Error del servidor | Error inesperado en el servidor backend. |
 
 ---
@@ -210,6 +210,23 @@ Utilizado para clasificar los artículos del inventario de despensa:
 - **Respuestas:**
   - `204 No Content`: Sesión cerrada exitosamente.
   - `401 Unauthorized`: Token ausente o inválido.
+
+#### `POST /api/usuarios/me/eliminar`
+- **Autenticación:** Requerida (`Bearer`).
+- **Descripción:** Elimina la cuenta de forma irreversible mediante soft delete: anonimiza el nombre, el correo y la contraseña, registra `eliminadoEn` e incrementa `tokenVersion`, de modo que los tokens anteriores dejan de ser válidos y el correo original queda libre para un nuevo registro. Si el usuario pertenecía a un hogar, se aplica la misma regla que al salir: la propiedad pasa al integrante más antiguo y, si era el último integrante, se eliminan el hogar, su inventario, sus alertas y sus expulsados. Comparte con el login el limitador de 10 fallos por correo.
+- **Advertencia para el cliente:** pedir confirmación explícita antes de invocarlo; la operación no se puede deshacer y debe cerrar la sesión local tras el `204`.
+- **Request Body:**
+  ```json
+  {
+    "contrasena": "Password123"
+  }
+  ```
+- **Respuestas:**
+  - `204 No Content`: cuenta eliminada.
+  - `400 Bad Request`: contraseña ausente o de más de 72 caracteres.
+  - `401 Unauthorized`: token ausente, inválido o revocado.
+  - `403 Forbidden`: contraseña incorrecta. **No equivale a 401**: muestra el error y permite reintentar sin cerrar la sesión.
+  - `429 Too Many Requests`: más de 10 contraseñas incorrectas.
 
 ---
 

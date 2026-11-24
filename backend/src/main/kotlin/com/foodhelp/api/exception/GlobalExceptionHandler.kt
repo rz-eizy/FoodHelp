@@ -56,6 +56,10 @@ class GlobalExceptionHandler {
     fun credencialesInvalidas(e: CredencialesInvalidasException): ResponseEntity<Map<String, Any>> =
         respuesta(HttpStatus.UNAUTHORIZED, e.message ?: "Credenciales inválidas")
 
+    @ExceptionHandler(ContrasenaIncorrectaException::class)
+    fun contrasenaIncorrecta(e: ContrasenaIncorrectaException): ResponseEntity<Map<String, Any>> =
+        respuesta(HttpStatus.FORBIDDEN, e.message ?: "Contraseña incorrecta")
+
     @ExceptionHandler(DemasiadosIntentosException::class)
     fun demasiadosIntentos(e: DemasiadosIntentosException): ResponseEntity<Map<String, Any>> =
         respuesta(HttpStatus.TOO_MANY_REQUESTS, e.message ?: "Demasiados intentos. Inténtalo de nuevo más tarde")

@@ -40,10 +40,7 @@ class HogarService(
 ) {
     @Transactional
     fun salirDelHogar() {
-        val usuarioInicial = usuarioActualService.usuarioActual()
-        if (usuarioInicial.hogar == null) throw UsuarioSinHogarException()
-        val (hogar, usuario) = hogarYUsuarioBloqueados(usuarioInicial)
-        retirarMiembro(usuario, hogar)
+        retirarMiembro(usuarioActualService.usuarioActual())
     }
 
     @Transactional
@@ -91,10 +88,19 @@ class HogarService(
         return hogar to usuario
     }
 
-    private fun retirarMiembro(
+    // Bloquea en orden fijo hogar -> usuario y devuelve la entidad bloqueada para que
+    // eliminar cuenta (PR18) pueda continuar con la anonimizacion en la misma transaccion
+    internal fun retirarMiembro(usuarioInicial: Usuario): Usuario {
+        if (usuarioInicial.hogar == null) throw UsuarioSinHogarException()
+        val (hogar, usuario) = hogarYUsuarioBloqueados(usuarioInicial)
+        retirarMiembroBloqueado(usuario, hogar)
+        return usuario
+    }
+
+    private fun retirarMiembroBloqueado(
         usuario: Usuario,
         hogar: Hogar,
-    ): Boolean {
+    ) {
         val hogarId = checkNotNull(hogar.id)
         val usuarioId = checkNotNull(usuario.id)
 
@@ -108,12 +114,11 @@ class HogarService(
         hogar.usuarios.remove(usuario)
         usuarioRepository.saveAndFlush(usuario)
 
-        if (usuarioRepository.countByHogarId(hogarId) != 0L) return false
+        if (usuarioRepository.countByHogarId(hogarId) != 0L) return
 
         alertaRepository.deleteByHogarId(hogarId)
         hogarExpulsadoRepository.deleteByHogarId(hogarId)
         hogarRepository.delete(hogar)
-        return true
     }
 
     @Transactional
