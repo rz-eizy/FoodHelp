@@ -17,4 +17,5 @@ data class AlertaResponse(
     val diasRestantes: Int,
     val leida: Boolean,
     val fechaCreacion: LocalDate,
+    val vencido: Boolean = diasRestantes < 0,
 )

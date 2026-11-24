@@ -544,4 +544,25 @@ class AccesoEntreHogaresTest {
 
         assertTrue(alertaRepository.findByArticuloId(propio.id!!) == null)
     }
+
+    @Test
+    fun `listar alertas expone vencido en true para una alerta con dias negativos`() {
+        val propio = articulo(hogarPropio, 3)
+        alertaRepository.save(
+            Alerta(
+                articuloId = propio.id!!,
+                nombreProducto = "Arroz",
+                diasRestantes = -2,
+                hogarId = hogarPropio.id!!,
+                leida = false,
+                fechaCreacion = LocalDate.now(),
+            ),
+        )
+
+        mockMvc
+            .perform(get("/api/alertas").header("Authorization", bearerAna))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$[0].diasRestantes").value(-2))
+            .andExpect(jsonPath("$[0].vencido").value(true))
+    }
 }

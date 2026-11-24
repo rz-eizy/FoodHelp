@@ -1,5 +1,7 @@
 package com.foodhelp.api.service
 
+import com.foodhelp.api.config.Paginacion
+import com.foodhelp.api.dto.AlertaResponse
 import com.foodhelp.api.models.Alerta
 import com.foodhelp.api.models.ArticuloDespensa
 import com.foodhelp.api.models.Hogar
@@ -15,6 +17,8 @@ import org.mockito.Mockito.never
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import org.mockito.junit.jupiter.MockitoExtension
+import org.springframework.data.domain.PageImpl
+import org.springframework.data.domain.Sort
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
@@ -123,5 +127,37 @@ class AlertaServiceTest {
         alertaService.sincronizarDeArticulo(articulo)
 
         verify(alertaRepository, never()).save(org.mockito.ArgumentMatchers.any(Alerta::class.java))
+    }
+
+    private fun respuestaConDias(diasRestantes: Int): AlertaResponse {
+        val alerta =
+            Alerta(
+                id = UUID.randomUUID(),
+                articuloId = UUID.randomUUID(),
+                nombreProducto = "Leche",
+                diasRestantes = diasRestantes,
+                hogarId = hogarId,
+                leida = false,
+                fechaCreacion = hoy,
+            )
+        val pageable =
+            Paginacion.de(0, 10, Sort.by(Sort.Order.desc("fechaCreacion"), Sort.Order.asc("id")))
+        `when`(alertaRepository.findByHogarId(hogarId, pageable)).thenReturn(PageImpl(listOf(alerta)))
+        return alertaService.listarPorHogar(hogarId, 0, 10).single()
+    }
+
+    @Test
+    fun `vencido es falso cuando faltan dias para vencer`() {
+        assertEquals(false, respuestaConDias(2).vencido)
+    }
+
+    @Test
+    fun `vencido es falso cuando vence hoy`() {
+        assertEquals(false, respuestaConDias(0).vencido)
+    }
+
+    @Test
+    fun `vencido es verdadero cuando la fecha ya paso`() {
+        assertEquals(true, respuestaConDias(-1).vencido)
     }
 }

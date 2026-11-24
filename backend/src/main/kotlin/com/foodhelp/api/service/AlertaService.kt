@@ -88,6 +88,7 @@ class AlertaService(
             diasRestantes = diasRestantes,
             leida = leida,
             fechaCreacion = fechaCreacion,
+            vencido = diasRestantes < 0,
         )
 
     companion object {
