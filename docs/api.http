@@ -60,8 +60,8 @@ Authorization: Bearer {{token}}
 ###############################################################################
 
 ### 4.1. Crear un nuevo hogar
-# El usuario pasa a ser el primer miembro del hogar. Falla si ya tiene hogar (409 Conflict).
-# HTTP 201 Created -> {"id": "...", "nombre": "...", "codigoHogar": "...", "usuarios": [...]}
+# El usuario pasa a ser el primer miembro y propietario del hogar (esPropietario: true). Falla si ya tiene hogar (409 Conflict).
+# HTTP 201 Created -> {"id": "...", "nombre": "...", "codigoHogar": "...", "esPropietario": true, "usuarios": [...]}
 POST {{baseUrl}}/api/hogares
 Authorization: Bearer {{token}}
 Content-Type: application/json
@@ -77,7 +77,8 @@ GET {{baseUrl}}/api/hogares/K7W9MNP2QR
 Authorization: Bearer {{token}}
 
 ### 4.3. Unirse a un hogar con código de invitación
-# Une al usuario autenticado al hogar. Sujeto a rate limit (10 fallos / 10 min).
+# Une al usuario autenticado al hogar; si no hay propietario, pasa a serlo. Un expulsado no puede reingresar (403).
+# Sujeto a rate limit (10 fallos / 10 min).
 # HTTP 200 OK -> HogarResponse
 POST {{baseUrl}}/api/hogares/unirse
 Authorization: Bearer {{token}}
@@ -88,9 +89,17 @@ Content-Type: application/json
 }
 
 ### 4.4. Salir del hogar actual
-# Desvincula al usuario. Si era el último miembro, elimina el hogar y su inventario.
+# Desvincula al usuario; si era propietario, traspasa al integrante más antiguo.
+# Si era el último miembro, elimina el hogar, inventario, alertas y expulsados.
 # HTTP 204 No Content. Si no pertenecía a ningún hogar, responde 409 Conflict.
 POST {{baseUrl}}/api/hogares/salir
+Authorization: Bearer {{token}}
+
+### 4.5. Expulsar a otro integrante del hogar
+# Solo el propietario puede expulsar. El expulsado no podrá volver a unirse (403), pero su JWT sigue válido.
+# HTTP 204 No Content. 403 si no es propietario, 400 si se expulsa a sí mismo, 404 si el objetivo es ajeno o inexistente, 409 si el actor no tiene hogar.
+@usuarioId = 9f8432a1-55bb-4770-bc10-1845bbcd4123
+DELETE {{baseUrl}}/api/hogares/miembros/{{usuarioId}}
 Authorization: Bearer {{token}}
 
 ###############################################################################

@@ -217,7 +217,7 @@ Utilizado para clasificar los artículos del inventario de despensa:
 
 #### `POST /api/hogares`
 - **Autenticación:** Requerida (`Bearer`).
-- **Descripción:** Crea un nuevo hogar asignando al usuario creador como miembro. El usuario no debe pertenecer a otro hogar previamente.
+- **Descripción:** Crea un nuevo hogar asignando al usuario creador como propietario (`esPropietario: true`). El usuario no debe pertenecer a otro hogar previamente.
 - **Request Body:**
   ```json
   {
@@ -232,10 +232,12 @@ Utilizado para clasificar los artículos del inventario de despensa:
       "id": "e4b9d032-124b-4a5f-9562-b9e7bdfa1832",
       "nombre": "Casa de Campo",
       "codigoHogar": "K7W9MNP2QR",
+      "esPropietario": true,
       "usuarios": [
         {
           "id": "c1f7b82e-9d21-4f76-88a1-5f053e1ad944",
-          "nombre": "Ana Gómez"
+          "nombre": "Ana Gómez",
+          "esPropietario": true
         }
       ]
     }
@@ -246,7 +248,7 @@ Utilizado para clasificar los artículos del inventario de despensa:
 
 #### `POST /api/hogares/unirse`
 - **Autenticación:** Requerida (`Bearer`).
-- **Descripción:** Une al usuario a un hogar existente mediante su código de invitación (10 caracteres). Sujeto a rate limiting (10 fallos / 10 min).
+- **Descripción:** Une al usuario a un hogar existente mediante su código de invitación (10 caracteres). Registra la fecha de ingreso y, si el hogar no tiene propietario, el nuevo integrante pasa a serlo. Un usuario expulsado de ese hogar no puede volver a unirse (`403 Forbidden`, sin contar para el limitador). Sujeto a rate limiting (10 fallos / 10 min).
 - **Request Body:**
   ```json
   {
@@ -261,14 +263,17 @@ Utilizado para clasificar los artículos del inventario de despensa:
       "id": "e4b9d032-124b-4a5f-9562-b9e7bdfa1832",
       "nombre": "Casa de Campo",
       "codigoHogar": "K7W9MNP2QR",
+      "esPropietario": true,
       "usuarios": [
         {
           "id": "c1f7b82e-9d21-4f76-88a1-5f053e1ad944",
-          "nombre": "Ana Gómez"
+          "nombre": "Ana Gómez",
+          "esPropietario": true
         },
         {
           "id": "9f8432a1-55bb-4770-bc10-1845bbcd4123",
-          "nombre": "Carlos López"
+          "nombre": "Carlos López",
+          "esPropietario": false
         }
       ]
     }
@@ -291,11 +296,23 @@ Utilizado para clasificar los artículos del inventario de despensa:
 
 #### `POST /api/hogares/salir`
 - **Autenticación:** Requerida (`Bearer`).
-- **Descripción:** Desvincula al usuario autenticado de su hogar actual. Si el usuario era el último integrante restante, el hogar y su inventario se eliminan automáticamente.
+- **Descripción:** Desvincula al usuario autenticado de su hogar actual. Si el usuario era el propietario, la propiedad se traspasa al integrante más antiguo. Si era el último integrante, se eliminan el hogar, su inventario, sus alertas y su registro de expulsados.
 - **Respuestas:**
   - `204 No Content`: Salida exitosa.
   - `401 Unauthorized`: Token inválido.
-  - `409 Conflict`: El usuario no pertenece a ningún hogar (`UsuarioSinHogarException`).
+  - `409 Conflict`: El usuario no pertenece a ningún hogar (`UsuarioSinHogarException`) o hubo conflicto de bloqueo.
+
+#### `DELETE /api/hogares/miembros/{usuarioId}`
+- **Autenticación:** Requerida (`Bearer`).
+- **Descripción:** Expulsa a otro integrante del hogar del usuario autenticado. Solo puede hacerlo el propietario; el afectado queda registrado en `hogar_expulsados` y no podrá volver a unirse. El JWT del expulsado sigue válido, pero ya no pertenece al hogar.
+- **Parámetros de ruta:** `usuarioId` (UUID).
+- **Respuestas:**
+  - `204 No Content`: Integrante expulsado.
+  - `400 Bad Request`: El usuario intenta expulsarse a sí mismo; debe usar `POST /api/hogares/salir`.
+  - `401 Unauthorized`: Token inválido.
+  - `403 Forbidden`: El actor no es el propietario (`Solo el propietario del hogar puede expulsar integrantes`).
+  - `404 Not Found`: El objetivo no existe o no pertenece al hogar (`MiembroNotFoundException`, misma respuesta para ambos).
+  - `409 Conflict`: El actor no pertenece a ningún hogar o hubo conflicto de bloqueo.
 
 ---
 
