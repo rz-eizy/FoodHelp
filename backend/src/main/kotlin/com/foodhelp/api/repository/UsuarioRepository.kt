@@ -14,6 +14,11 @@ interface UsuarioRepository : JpaRepository<Usuario, UUID> {
 
     fun countByHogarId(hogarId: UUID): Long
 
+    fun findFirstByHogarIdAndIdNotOrderByHogarDesdeAscIdAsc(
+        hogarId: UUID,
+        excluirId: UUID,
+    ): Usuario?
+
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("update Usuario u set u.tokenVersion = u.tokenVersion + 1 where u.id = :id")
     fun incrementarTokenVersion(

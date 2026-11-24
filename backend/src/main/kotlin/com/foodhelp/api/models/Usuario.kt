@@ -9,6 +9,7 @@ import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
+import java.time.Instant
 import java.util.UUID
 
 @Entity
@@ -28,6 +29,8 @@ class Usuario(
     var hogar: Hogar? = null,
     @Column(name = "token_version", nullable = false)
     var tokenVersion: Int = 0,
+    @Column(name = "hogar_desde")
+    var hogarDesde: Instant? = null,
 ) {
     override fun toString(): String = "Usuario(id=$id, nombre='$nombre', correo='$correo')"
 

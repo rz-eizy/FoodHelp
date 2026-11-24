@@ -24,6 +24,8 @@ class Hogar(
     var usuarios: MutableList<Usuario> = mutableListOf(),
     @OneToMany(mappedBy = "hogar", cascade = [CascadeType.ALL], orphanRemoval = true)
     var articulos: MutableList<ArticuloDespensa> = mutableListOf(),
+    @Column(name = "propietario_id")
+    var propietarioId: UUID? = null,
 ) {
     override fun toString(): String = "Hogar(id=$id, nombre='$nombre', codigoHogar='$codigoHogar')"
 

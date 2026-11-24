@@ -38,4 +38,6 @@ interface AlertaRepository : JpaRepository<Alerta, UUID> {
     ): Int
 
     fun deleteByArticuloId(articuloId: UUID)
+
+    fun deleteByHogarId(hogarId: UUID)
 }
