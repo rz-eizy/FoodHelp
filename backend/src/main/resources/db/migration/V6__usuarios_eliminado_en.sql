@@ -1,0 +1,1 @@
+ALTER TABLE usuarios ADD COLUMN eliminado_en TIMESTAMP WITH TIME ZONE;

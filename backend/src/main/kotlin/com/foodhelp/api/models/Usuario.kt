@@ -31,6 +31,8 @@ class Usuario(
     var tokenVersion: Int = 0,
     @Column(name = "hogar_desde")
     var hogarDesde: Instant? = null,
+    @Column(name = "eliminado_en")
+    var eliminadoEn: Instant? = null,
 ) {
     override fun toString(): String = "Usuario(id=$id, nombre='$nombre', correo='$correo')"
 
