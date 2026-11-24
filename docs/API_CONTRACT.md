@@ -417,6 +417,7 @@ Utilizado para clasificar los artículos del inventario de despensa:
 #### `GET /api/alertas`
 - **Autenticación:** Requerida (`Bearer`).
 - **Descripción:** Lista las alertas de vencimiento del hogar del usuario autenticado, ordenadas por fecha de creación descendente.
+- **Ciclo de vida:** mientras exista un artículo con `cantidad > 0` cuya fecha de vencimiento esté dentro de los próximos 10 días (o ya haya pasado), existe su alerta. El monitor actualiza `diasRestantes` en cada ejecución; si el producto vence (`diasRestantes < 0`), el campo `vencido` es `true` y la alerta vuelve a `leida: false` aunque hubiera sido marcada como leída. La alerta desaparece al eliminar el artículo, al agotar su stock (`cantidad = 0`) o al mover la fecha a más de 10 días. La creación y edición de artículos sincronizan la alerta de inmediato, sin esperar al monitor. El monitor ya no consulta Spoonacular: las sugerencias se obtienen solo desde `GET /api/recetas/sugerencias`.
 - **Query Params:**
   - `page`: Entero, default `0`.
   - `size`: Entero, default `50` (máx `100`).
@@ -430,12 +431,15 @@ Utilizado para clasificar los artículos del inventario de despensa:
         "nombreProducto": "Yogurt Natural",
         "diasRestantes": 2,
         "leida": false,
-        "fechaCreacion": "2026-11-15"
+        "fechaCreacion": "2026-11-15",
+        "vencido": false
       }
     ]
     ```
   - `401 Unauthorized`: Token inválido.
   - `403 Forbidden`: Usuario sin hogar.
+
+   - `diasRestantes`: entero; negativo indica que la fecha de vencimiento ya pasó (por ejemplo, `-2` = venció hace 2 días). `vencido` es `true` exactamente cuando `diasRestantes < 0`.
 
 #### `GET /api/alertas/hogar/{hogarId}`
 - **Autenticación:** Requerida (`Bearer`).

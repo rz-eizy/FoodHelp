@@ -169,8 +169,9 @@ Authorization: Bearer {{token}}
 ###############################################################################
 
 ### 6.1. Listar alertas del hogar actual
-# Alertas automáticas para artículos con 3 o menos días de vigencia restante.
-# HTTP 200 OK -> [{"id": "...", "articuloId": "...", "diasRestantes": 2, "leida": false, ...}]
+# Alertas de artículos que vencen en los próximos 10 días o ya vencieron (diasRestantes negativo -> vencido: true).
+# Se sincronizan al crear/editar el artículo y en cada ejecución del monitor; desaparecen si el artículo se elimina, se agota o se aleja a más de 10 días.
+# HTTP 200 OK -> [{"id": "...", "articuloId": "...", "diasRestantes": 2, "leida": false, "vencido": false, ...}]
 GET {{baseUrl}}/api/alertas
 Authorization: Bearer {{token}}
 
