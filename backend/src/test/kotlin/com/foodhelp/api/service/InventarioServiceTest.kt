@@ -42,6 +42,9 @@ class InventarioServiceTest {
     @Mock
     private lateinit var alertaRepository: AlertaRepository
 
+    @Mock
+    private lateinit var alertaService: AlertaService
+
     private val fixedInstant = Instant.parse("2026-10-25T10:00:00Z")
     private val clock = Clock.fixed(fixedInstant, ZoneId.of("UTC"))
     private val hoy = LocalDate.now(clock)
@@ -69,7 +72,7 @@ class InventarioServiceTest {
 
     @BeforeEach
     fun setUp() {
-        inventarioService = InventarioService(articuloRepository, hogarRepository, alertaRepository, clock)
+        inventarioService = InventarioService(articuloRepository, hogarRepository, alertaRepository, alertaService, clock)
     }
 
     @Test
@@ -291,6 +294,7 @@ class InventarioServiceTest {
         assertEquals("Manzanas", creado.nombre)
         assertEquals(5, creado.cantidad)
         assertEquals(hogarId, creado.hogarId)
+        verify(alertaService).sincronizarDeArticulo(anyArticulo())
     }
 
     @Test
@@ -420,5 +424,27 @@ class InventarioServiceTest {
         assertEquals("Leche", articulo.nombre)
         verify(alertaRepository).deleteByArticuloId(articuloId)
         verify(articuloRepository).delete(articulo)
+    }
+
+    @Test
+    fun `actualizarArticulo con nueva fecha sincroniza la alerta del articulo`() {
+        val articuloId = UUID.randomUUID()
+        val articulo =
+            ArticuloDespensa(
+                id = articuloId,
+                nombre = "Leche",
+                fechaVencimiento = hoy.plusDays(20),
+                cantidad = 3,
+                hogar = hogar,
+            )
+        `when`(articuloRepository.findById(articuloId)).thenReturn(Optional.of(articulo))
+
+        inventarioService.actualizarArticulo(
+            articuloId,
+            hogarId,
+            ActualizarArticuloRequest(fechaVencimiento = hoy.plusDays(3)),
+        )
+
+        verify(alertaService).sincronizarDeArticulo(articulo)
     }
 }

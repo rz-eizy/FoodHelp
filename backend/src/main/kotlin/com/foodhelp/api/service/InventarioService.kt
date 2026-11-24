@@ -25,6 +25,7 @@ class InventarioService(
     private val articuloRepository: ArticuloRepository,
     private val hogarRepository: HogarRepository,
     private val alertaRepository: AlertaRepository,
+    private val alertaService: AlertaService,
     private val clock: Clock,
 ) {
     @Transactional(readOnly = true)
@@ -70,7 +71,9 @@ class InventarioService(
                 categoria = request.categoria,
                 hogar = hogar,
             )
-        return ArticuloDTO.fromEntity(articuloRepository.save(articulo))
+        val guardado = articuloRepository.save(articulo)
+        alertaService.sincronizarDeArticulo(guardado)
+        return ArticuloDTO.fromEntity(guardado)
     }
 
     @Transactional
@@ -156,7 +159,7 @@ class InventarioService(
         request.categoria?.let { articulo.categoria = it }
         if (request.fechaVencimiento != null) {
             articulo.fechaVencimiento = request.fechaVencimiento
-            alertaRepository.deleteByArticuloId(articuloId)
+            alertaService.sincronizarDeArticulo(articulo)
         }
 
         return ArticuloDTO.fromEntity(articulo)

@@ -359,7 +359,7 @@ class AccesoEntreHogaresTest {
             .perform(
                 patch("/api/inventario/${propio.id}")
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content("""{"fechaVencimiento": "2026-12-31"}""")
+                    .content("""{"fechaVencimiento": "${LocalDate.now().plusDays(30)}"}""")
                     .header("Authorization", bearerAna),
             ).andExpect(status().isOk)
 
@@ -491,5 +491,57 @@ class AccesoEntreHogaresTest {
             .andExpect(jsonPath("$.error").exists())
 
         assertEquals(5, articuloRepository.findById(propio.id!!).get().cantidad)
+    }
+
+    @Test
+    fun `crear articulo que vence en tres dias crea su alerta al instante`() {
+        mockMvc
+            .perform(
+                post("/api/inventario")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        """
+                        {
+                            "nombre": "Leche",
+                            "fechaVencimiento": "${LocalDate.now().plusDays(3)}",
+                            "cantidad": 2,
+                            "categoria": "LACTEOS"
+                        }
+                        """.trimIndent(),
+                    ).header("Authorization", bearerAna),
+            ).andExpect(status().isCreated)
+
+        val creado = articuloRepository.findByHogarId(hogarPropio.id!!).single()
+        val alerta = alertaRepository.findByArticuloId(creado.id!!)
+        assertTrue(alerta != null)
+        assertEquals(3, alerta!!.diasRestantes)
+        assertFalse(alerta.leida)
+    }
+
+    @Test
+    fun `editar fecha actualiza la alerta al instante y la elimina si queda a mas de diez dias`() {
+        val propio = articulo(hogarPropio, 30)
+
+        mockMvc
+            .perform(
+                patch("/api/inventario/${propio.id}")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"fechaVencimiento": "${LocalDate.now().plusDays(3)}"}""")
+                    .header("Authorization", bearerAna),
+            ).andExpect(status().isOk)
+
+        val alerta = alertaRepository.findByArticuloId(propio.id!!)
+        assertTrue(alerta != null)
+        assertEquals(3, alerta!!.diasRestantes)
+
+        mockMvc
+            .perform(
+                patch("/api/inventario/${propio.id}")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"fechaVencimiento": "${LocalDate.now().plusDays(30)}"}""")
+                    .header("Authorization", bearerAna),
+            ).andExpect(status().isOk)
+
+        assertTrue(alertaRepository.findByArticuloId(propio.id!!) == null)
     }
 }
