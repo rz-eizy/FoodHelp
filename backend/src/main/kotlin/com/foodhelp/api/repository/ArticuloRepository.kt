@@ -18,17 +18,11 @@ interface ArticuloRepository : JpaRepository<ArticuloDespensa, UUID> {
         pageable: Pageable,
     ): Slice<ArticuloDespensa>
 
-    fun findByFechaVencimientoBetween(
-        fechaInicio: LocalDate,
-        fechaFin: LocalDate,
-    ): List<ArticuloDespensa>
-
     @Query(
         "select a from ArticuloDespensa a join fetch a.hogar " +
-            "where a.fechaVencimiento between :desde and :hasta and a.cantidad > 0",
+            "where a.fechaVencimiento <= :hasta and a.cantidad > 0",
     )
-    fun findPorVencerConHogar(
-        @Param("desde") desde: LocalDate,
+    fun findConAlertaActiva(
         @Param("hasta") hasta: LocalDate,
     ): List<ArticuloDespensa>
 

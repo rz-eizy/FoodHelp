@@ -13,6 +13,8 @@ interface AlertaRepository : JpaRepository<Alerta, UUID> {
 
     fun findByArticuloIdIn(articuloIds: Collection<UUID>): List<Alerta>
 
+    fun findByArticuloId(articuloId: UUID): Alerta?
+
     fun findByHogarId(
         hogarId: UUID,
         pageable: Pageable,
