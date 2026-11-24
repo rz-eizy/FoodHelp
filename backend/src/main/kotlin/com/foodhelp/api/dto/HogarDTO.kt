@@ -19,6 +19,7 @@ data class JoinHogarRequest(
 data class UsuarioResponse(
     val id: UUID,
     val nombre: String,
+    val esPropietario: Boolean = false,
 )
 
 data class HogarResponse(
@@ -26,4 +27,5 @@ data class HogarResponse(
     val nombre: String,
     val codigoHogar: String,
     val usuarios: List<UsuarioResponse> = emptyList(),
+    val esPropietario: Boolean = false,
 )

@@ -16,6 +16,9 @@ import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.security.SecureRandom
+import java.time.Clock
+import java.time.Instant
+import java.util.UUID
 
 @Service
 class HogarService(
@@ -24,6 +27,7 @@ class HogarService(
     private val usuarioActualService: UsuarioActualService,
     @Qualifier("limitadorUnirse")
     private val limitadorUnirse: LimitadorIntentos,
+    private val clock: Clock,
 ) {
     @Transactional
     fun salirDelHogar() {
@@ -47,13 +51,18 @@ class HogarService(
 
         val hogar =
             hogarRepository.save(
-                Hogar(nombre = request.nombre.trim(), codigoHogar = generarCodigoUnico()),
+                Hogar(
+                    nombre = request.nombre.trim(),
+                    codigoHogar = generarCodigoUnico(),
+                    propietarioId = checkNotNull(usuario.id),
+                ),
             )
 
         // El alta del creador se persiste por dirty checking, sin guardado explícito
         usuario.hogar = hogar
+        usuario.hogarDesde = Instant.now(clock)
         hogar.usuarios.add(usuario)
-        return hogar.toResponse()
+        return hogar.toResponse(usuario.id)
     }
 
     @Transactional
@@ -75,9 +84,13 @@ class HogarService(
             }
 
         usuario.hogar = hogar
+        usuario.hogarDesde = Instant.now(clock)
         hogar.usuarios.add(usuario)
+        if (hogar.propietarioId == null) {
+            hogar.propietarioId = usuario.id
+        }
         limitadorUnirse.reiniciar(clave)
-        return hogar.toResponse()
+        return hogar.toResponse(usuario.id)
     }
 
     @Transactional(readOnly = true)
@@ -89,10 +102,11 @@ class HogarService(
 
         // Responder 404 también a quien no es miembro, igual que si el código no existiera,
         // evita revelar qué códigos de hogar son válidos
-        if (usuarioActualService.usuarioActual().hogar?.id != hogar.id) {
+        val usuario = usuarioActualService.usuarioActual()
+        if (usuario.hogar?.id != hogar.id) {
             throw HogarNotFoundException(codigoHogar)
         }
-        return hogar.toResponse()
+        return hogar.toResponse(usuario.id)
     }
 
     // 10 caracteres de un alfabeto de 32 símbolos dan 50 bits de entropía
@@ -106,7 +120,7 @@ class HogarService(
         error("No fue posible generar un código de hogar único")
     }
 
-    private fun Hogar.toResponse(): HogarResponse =
+    private fun Hogar.toResponse(usuarioId: UUID?): HogarResponse =
         HogarResponse(
             id = checkNotNull(id),
             nombre = nombre,
@@ -114,7 +128,14 @@ class HogarService(
             usuarios =
                 usuarios
                     .distinctBy { it.id }
-                    .map { UsuarioResponse(id = checkNotNull(it.id), nombre = it.nombre) },
+                    .map {
+                        UsuarioResponse(
+                            id = checkNotNull(it.id),
+                            nombre = it.nombre,
+                            esPropietario = it.id == propietarioId,
+                        )
+                    },
+            esPropietario = usuarioId == propietarioId,
         )
 
     private companion object {

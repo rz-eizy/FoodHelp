@@ -207,4 +207,64 @@ class HogarControllerTest {
             .perform(get("/api/inventario").header("Authorization", token2))
             .andExpect(status().isOk)
     }
+
+    @Test
+    fun `el creador del hogar es propietario y registra hogarDesde`() {
+        val usuario = usuarioRepository.save(Usuario(nombre = "Carlos", contrasena = "pass123", correo = "carlos@test.com", hogar = null))
+        val token = "Bearer " + jwtService.tokenParaUsuario(usuario)
+
+        mockMvc
+            .perform(
+                post("/api/hogares")
+                    .header("Authorization", token)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(CreateHogarRequest(nombre = "Mi Casa"))),
+            ).andExpect(status().isCreated)
+            .andExpect(jsonPath("$.esPropietario").value(true))
+            .andExpect(jsonPath("$.usuarios[0].esPropietario").value(true))
+
+        val actualizado = usuarioRepository.findById(usuario.id!!).get()
+        assertTrue(actualizado.hogarDesde != null)
+    }
+
+    @Test
+    fun `unirse a un hogar sin propietario convierte al nuevo integrante en propietario`() {
+        val hogar = hogarRepository.save(Hogar(nombre = "Hogar Sin Propietario", codigoHogar = "SINPROPI1"))
+        val primero = usuarioRepository.save(Usuario(nombre = "Ana", contrasena = "pass123", correo = "ana@test.com", hogar = hogar))
+        val segundo = usuarioRepository.save(Usuario(nombre = "Luis", contrasena = "pass123", correo = "luis@test.com", hogar = null))
+        val tokenSegundo = "Bearer " + jwtService.tokenParaUsuario(segundo)
+
+        mockMvc
+            .perform(
+                post("/api/hogares/unirse")
+                    .header("Authorization", tokenSegundo)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(JoinHogarRequest(codigoHogar = "SINPROPI1"))),
+            ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.esPropietario").value(true))
+
+        val actualizado = hogarRepository.findById(hogar.id!!).get()
+        assertTrue(actualizado.propietarioId == segundo.id)
+        assertTrue(usuarioRepository.findById(segundo.id!!).get().hogarDesde != null)
+    }
+
+    @Test
+    fun `perfil del usuario incluye esPropietario`() {
+        val hogar = hogarRepository.save(Hogar(nombre = "Hogar Perfil", codigoHogar = "PERFIL1234", propietarioId = null))
+        val usuario = usuarioRepository.save(Usuario(nombre = "Ana", contrasena = "pass123", correo = "ana@test.com", hogar = hogar))
+        val token = "Bearer " + jwtService.tokenParaUsuario(usuario)
+
+        mockMvc
+            .perform(get("/api/usuarios/me").header("Authorization", token))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.hogar.esPropietario").value(false))
+
+        hogar.propietarioId = usuario.id
+        hogarRepository.saveAndFlush(hogar)
+
+        mockMvc
+            .perform(get("/api/usuarios/me").header("Authorization", token))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.hogar.esPropietario").value(true))
+    }
 }
