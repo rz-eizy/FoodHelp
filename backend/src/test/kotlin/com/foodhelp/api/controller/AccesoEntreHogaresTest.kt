@@ -611,4 +611,56 @@ class AccesoEntreHogaresTest {
             .andExpect(jsonPath("$.length()").value(1))
             .andExpect(jsonPath("$[0].leida").value(true))
     }
+
+    @Test
+    fun `contador de no leidas incluye solo las alertas propias sin leer`() {
+        alertaDe(articulo(hogarPropio, 3))
+        alertaDe(articulo(hogarPropio, 4))
+        val propiaLeida = articulo(hogarPropio, 5)
+        alertaRepository.save(
+            Alerta(
+                articuloId = propiaLeida.id!!,
+                nombreProducto = propiaLeida.nombre,
+                diasRestantes = 5,
+                hogarId = hogarPropio.id!!,
+                leida = true,
+                fechaCreacion = LocalDate.now(),
+            ),
+        )
+        val ajena = articulo(hogarAjeno, 6)
+        alertaRepository.save(
+            Alerta(
+                articuloId = ajena.id!!,
+                nombreProducto = ajena.nombre,
+                diasRestantes = 6,
+                hogarId = hogarAjeno.id!!,
+                leida = false,
+                fechaCreacion = LocalDate.now(),
+            ),
+        )
+
+        mockMvc
+            .perform(get("/api/alertas/no-leidas/contador").header("Authorization", bearerAna))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.noLeidas").value(2))
+    }
+
+    @Test
+    fun `contador de no leidas sin token responde 401`() {
+        mockMvc.perform(get("/api/alertas/no-leidas/contador")).andExpect(status().isUnauthorized)
+    }
+
+    @Test
+    fun `contador de no leidas sin hogar responde 403`() {
+        val sinHogar =
+            usuarioRepository.save(
+                Usuario(nombre = "Sin Hogar", contrasena = "no-importa", correo = "sinhogar@test.com"),
+            )
+
+        mockMvc
+            .perform(
+                get("/api/alertas/no-leidas/contador")
+                    .header("Authorization", "Bearer " + jwtService.tokenParaUsuario(sinHogar)),
+            ).andExpect(status().isForbidden)
+    }
 }

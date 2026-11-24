@@ -2,6 +2,7 @@ package com.foodhelp.api.controller
 
 import com.foodhelp.api.config.Paginacion
 import com.foodhelp.api.dto.AlertaResponse
+import com.foodhelp.api.dto.ConteoAlertasResponse
 import com.foodhelp.api.security.UsuarioActualService
 import com.foodhelp.api.service.AlertaService
 import org.springframework.http.ResponseEntity
@@ -34,6 +35,10 @@ class AlertaController(
             }
         return ResponseEntity.ok(alertas)
     }
+
+    @GetMapping("/no-leidas/contador")
+    fun contarAlertasNoLeidas(): ResponseEntity<ConteoAlertasResponse> =
+        ResponseEntity.ok(ConteoAlertasResponse(alertaService.contarNoLeidas(usuarioActualService.hogarIdActual())))
 
     @GetMapping("/hogar/{hogarId}")
     fun obtenerAlertasPorHogarId(

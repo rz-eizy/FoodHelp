@@ -43,6 +43,9 @@ class AlertaService(
         return alertas.content.map { it.toResponse() }
     }
 
+    @Transactional(readOnly = true)
+    fun contarNoLeidas(hogarId: UUID): Long = alertaRepository.countByHogarIdAndLeidaFalse(hogarId)
+
     @Transactional
     fun marcarComoLeida(
         alertaId: UUID,

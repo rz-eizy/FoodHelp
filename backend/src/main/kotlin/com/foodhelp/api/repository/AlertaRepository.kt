@@ -26,5 +26,7 @@ interface AlertaRepository : JpaRepository<Alerta, UUID> {
         pageable: Pageable,
     ): Slice<Alerta>
 
+    fun countByHogarIdAndLeidaFalse(hogarId: UUID): Long
+
     fun deleteByArticuloId(articuloId: UUID)
 }

@@ -183,4 +183,11 @@ class AlertaServiceTest {
         assertEquals("Leche", respuesta[0].nombreProducto)
         assertFalse(respuesta[0].leida)
     }
+
+    @Test
+    fun `contarNoLeidas devuelve el conteo del repositorio para el hogar`() {
+        `when`(alertaRepository.countByHogarIdAndLeidaFalse(hogarId)).thenReturn(3L)
+
+        assertEquals(3L, alertaService.contarNoLeidas(hogarId))
+    }
 }
