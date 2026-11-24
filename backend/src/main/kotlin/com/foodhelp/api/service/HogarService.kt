@@ -4,10 +4,14 @@ import com.foodhelp.api.dto.CreateHogarRequest
 import com.foodhelp.api.dto.HogarResponse
 import com.foodhelp.api.dto.JoinHogarRequest
 import com.foodhelp.api.dto.UsuarioResponse
+import com.foodhelp.api.exception.AccesoDenegadoException
 import com.foodhelp.api.exception.HogarNotFoundException
+import com.foodhelp.api.exception.MiembroNotFoundException
+import com.foodhelp.api.exception.SolicitudInvalidaException
 import com.foodhelp.api.exception.UsuarioSinHogarException
 import com.foodhelp.api.exception.UsuarioYaEnHogarException
 import com.foodhelp.api.models.Hogar
+import com.foodhelp.api.models.HogarExpulsado
 import com.foodhelp.api.models.Usuario
 import com.foodhelp.api.repository.AlertaRepository
 import com.foodhelp.api.repository.HogarExpulsadoRepository
@@ -39,6 +43,34 @@ class HogarService(
         val usuario = usuarioActualService.usuarioActual()
         val hogar = usuario.hogar ?: throw UsuarioSinHogarException()
         retirarMiembro(usuario, hogar)
+    }
+
+    @Transactional
+    fun expulsarMiembro(usuarioId: UUID) {
+        val actor = usuarioActualService.usuarioActual()
+        val hogar = actor.hogar ?: throw UsuarioSinHogarException()
+        if (hogar.propietarioId != actor.id) {
+            throw AccesoDenegadoException("Solo el propietario del hogar puede expulsar integrantes")
+        }
+        if (actor.id == usuarioId) {
+            throw SolicitudInvalidaException("Para abandonar el hogar usa la opción de salir")
+        }
+
+        val objetivo = usuarioRepository.findById(usuarioId).orElseThrow { MiembroNotFoundException() }
+        if (objetivo.hogar?.id != hogar.id) throw MiembroNotFoundException()
+
+        val hogarId = checkNotNull(hogar.id)
+        objetivo.hogar = null
+        objetivo.hogarDesde = null
+        hogar.usuarios.remove(objetivo)
+        usuarioRepository.saveAndFlush(objetivo)
+        hogarExpulsadoRepository.save(
+            HogarExpulsado(
+                hogarId = hogarId,
+                usuarioId = usuarioId,
+                expulsadoEn = Instant.now(clock),
+            ),
+        )
     }
 
     private fun retirarMiembro(
@@ -104,6 +136,11 @@ class HogarService(
                 limitadorUnirse.registrarFallo(clave)
                 throw e
             }
+
+        val hogarId = checkNotNull(hogar.id)
+        if (hogarExpulsadoRepository.existsByHogarIdAndUsuarioId(hogarId, checkNotNull(usuario.id))) {
+            throw AccesoDenegadoException("No puedes unirte a este hogar")
+        }
 
         usuario.hogar = hogar
         usuario.hogarDesde = Instant.now(clock)

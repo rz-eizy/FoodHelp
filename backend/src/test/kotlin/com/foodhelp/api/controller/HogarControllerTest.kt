@@ -25,6 +25,7 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
@@ -403,5 +404,174 @@ class HogarControllerTest {
             .perform(get("/api/inventario").header("Authorization", "Bearer " + jwtService.tokenParaUsuario(restante)))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.length()").value(1))
+    }
+
+    @Test
+    fun `un integrante que no es propietario no puede expulsar a otro con 403`() {
+        val hogar = hogarRepository.save(Hogar(nombre = "Expulsion", codigoHogar = "EXP1234567"))
+        val propietario =
+            usuarioRepository.save(Usuario(nombre = "Dueno", contrasena = "pass123", correo = "dueno-exp@test.com", hogar = hogar))
+        val integrante =
+            usuarioRepository.save(Usuario(nombre = "Miembro", contrasena = "pass123", correo = "miembro-exp@test.com", hogar = hogar))
+        val objetivo =
+            usuarioRepository.save(Usuario(nombre = "Objetivo", contrasena = "pass123", correo = "objetivo-exp@test.com", hogar = hogar))
+        hogar.propietarioId = propietario.id
+        hogar.usuarios.addAll(listOf(propietario, integrante, objetivo))
+        hogarRepository.save(hogar)
+
+        mockMvc
+            .perform(
+                delete("/api/hogares/miembros/${objetivo.id}")
+                    .header("Authorization", "Bearer " + jwtService.tokenParaUsuario(integrante)),
+            ).andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.error").value("Solo el propietario del hogar puede expulsar integrantes"))
+
+        assertEquals(
+            hogar.id,
+            usuarioRepository
+                .findById(objetivo.id!!)
+                .get()
+                .hogar
+                ?.id,
+        )
+    }
+
+    @Test
+    fun `el propietario no puede expulsarse a si mismo y responde 400`() {
+        val hogar = hogarRepository.save(Hogar(nombre = "Expulsion", codigoHogar = "AUTO123456"))
+        val propietario =
+            usuarioRepository.save(Usuario(nombre = "Dueno", contrasena = "pass123", correo = "dueno-auto@test.com", hogar = hogar))
+        hogar.propietarioId = propietario.id
+        hogar.usuarios.add(propietario)
+        hogarRepository.save(hogar)
+
+        mockMvc
+            .perform(
+                delete("/api/hogares/miembros/${propietario.id}")
+                    .header("Authorization", "Bearer " + jwtService.tokenParaUsuario(propietario)),
+            ).andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.error").value("Para abandonar el hogar usa la opción de salir"))
+    }
+
+    @Test
+    fun `expulsar un integrante ajeno o inexistente responde 404 con el mismo cuerpo`() {
+        val hogar = hogarRepository.save(Hogar(nombre = "Expulsion", codigoHogar = "AJE1234567"))
+        val otroHogar = hogarRepository.save(Hogar(nombre = "Ajeno", codigoHogar = "OTRO123456"))
+        val propietario =
+            usuarioRepository.save(Usuario(nombre = "Dueno", contrasena = "pass123", correo = "dueno-ajeno@test.com", hogar = hogar))
+        val ajeno =
+            usuarioRepository.save(Usuario(nombre = "Ajeno", contrasena = "pass123", correo = "externo-exp@test.com", hogar = otroHogar))
+        hogar.propietarioId = propietario.id
+        hogar.usuarios.add(propietario)
+        hogarRepository.save(hogar)
+        val token = "Bearer " + jwtService.tokenParaUsuario(propietario)
+
+        val ajena =
+            mockMvc
+                .perform(delete("/api/hogares/miembros/${ajeno.id}").header("Authorization", token))
+                .andExpect(status().isNotFound)
+                .andExpect(jsonPath("$.error").value("El integrante no pertenece al hogar"))
+                .andReturn()
+        val inexistente =
+            mockMvc
+                .perform(delete("/api/hogares/miembros/${java.util.UUID.randomUUID()}").header("Authorization", token))
+                .andExpect(status().isNotFound)
+                .andExpect(jsonPath("$.error").value("El integrante no pertenece al hogar"))
+                .andReturn()
+
+        assertEquals(ajena.response.contentAsString, inexistente.response.contentAsString)
+    }
+
+    @Test
+    fun `un expulsado no puede volver a unirse pero otro integrante si`() {
+        val hogar = hogarRepository.save(Hogar(nombre = "Expulsion", codigoHogar = "REIN123456"))
+        val propietario =
+            usuarioRepository.save(Usuario(nombre = "Dueno", contrasena = "pass123", correo = "dueno-rein@test.com", hogar = hogar))
+        val expulsado =
+            usuarioRepository.save(Usuario(nombre = "Expulsado", contrasena = "pass123", correo = "expulsado@test.com", hogar = hogar))
+        hogar.propietarioId = propietario.id
+        hogar.usuarios.addAll(listOf(propietario, expulsado))
+        hogarRepository.save(hogar)
+
+        mockMvc
+            .perform(
+                delete("/api/hogares/miembros/${expulsado.id}")
+                    .header("Authorization", "Bearer " + jwtService.tokenParaUsuario(propietario)),
+            ).andExpect(status().isNoContent)
+
+        mockMvc
+            .perform(
+                post("/api/hogares/unirse")
+                    .header("Authorization", "Bearer " + jwtService.tokenParaUsuario(expulsado))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(JoinHogarRequest(codigoHogar = "REIN123456"))),
+            ).andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.error").value("No puedes unirte a este hogar"))
+
+        val otro = usuarioRepository.save(Usuario(nombre = "Nuevo", contrasena = "pass123", correo = "nuevo-rein@test.com"))
+        mockMvc
+            .perform(
+                post("/api/hogares/unirse")
+                    .header("Authorization", "Bearer " + jwtService.tokenParaUsuario(otro))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(JoinHogarRequest(codigoHogar = "REIN123456"))),
+            ).andExpect(status().isOk)
+
+        assertEquals(
+            hogar.id,
+            usuarioRepository
+                .findById(otro.id!!)
+                .get()
+                .hogar
+                ?.id,
+        )
+    }
+
+    @Test
+    fun `expulsar a un integrante conserva el hogar el inventario y registra la expulsion`() {
+        val hogar = hogarRepository.save(Hogar(nombre = "Expulsion", codigoHogar = "CONS123456"))
+        val propietario =
+            usuarioRepository.save(Usuario(nombre = "Dueno", contrasena = "pass123", correo = "dueno-conserva@test.com", hogar = hogar))
+        val integrante =
+            usuarioRepository.save(Usuario(nombre = "Miembro", contrasena = "pass123", correo = "miembro-conserva@test.com", hogar = hogar))
+        val articulo =
+            articuloRepository.save(
+                ArticuloDespensa(
+                    nombre = "Pan",
+                    fechaVencimiento = LocalDate.now().plusDays(5),
+                    cantidad = 2,
+                    categoria = CategoriaEnum.PANADERIA,
+                    hogar = hogar,
+                ),
+            )
+        hogar.propietarioId = propietario.id
+        hogar.usuarios.addAll(listOf(propietario, integrante))
+        hogarRepository.save(hogar)
+
+        mockMvc
+            .perform(
+                delete("/api/hogares/miembros/${integrante.id}")
+                    .header("Authorization", "Bearer " + jwtService.tokenParaUsuario(propietario)),
+            ).andExpect(status().isNoContent)
+
+        assertTrue(hogarRepository.existsById(hogar.id!!))
+        assertTrue(articuloRepository.existsById(articulo.id!!))
+        assertTrue(hogarExpulsadoRepository.existsByHogarIdAndUsuarioId(hogar.id!!, integrante.id!!))
+        mockMvc
+            .perform(get("/api/inventario").header("Authorization", "Bearer " + jwtService.tokenParaUsuario(propietario)))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.length()").value(1))
+    }
+
+    @Test
+    fun `expulsar sin pertenecer a ningun hogar responde 409`() {
+        val sinHogar = usuarioRepository.save(Usuario(nombre = "SinHogar", contrasena = "pass123", correo = "sinhogar-exp@test.com"))
+
+        mockMvc
+            .perform(
+                delete("/api/hogares/miembros/${java.util.UUID.randomUUID()}")
+                    .header("Authorization", "Bearer " + jwtService.tokenParaUsuario(sinHogar)),
+            ).andExpect(status().isConflict)
+            .andExpect(jsonPath("$.error").value("El usuario no pertenece a ningún hogar"))
     }
 }

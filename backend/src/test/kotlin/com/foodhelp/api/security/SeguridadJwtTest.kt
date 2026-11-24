@@ -88,6 +88,7 @@ class SeguridadJwtTest {
                     .content("""{"cantidad": 1}""")
             },
             { delete("/api/inventario/$randomUuid") },
+            { delete("/api/hogares/miembros/$randomUuid") },
             { patch("/api/alertas/$randomUuid/leida") },
         )
     }

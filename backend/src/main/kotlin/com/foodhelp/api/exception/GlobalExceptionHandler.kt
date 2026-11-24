@@ -21,6 +21,7 @@ class GlobalExceptionHandler {
         ArticuloNotFoundException::class,
         HogarNotFoundException::class,
         AlertaNotFoundException::class,
+        MiembroNotFoundException::class,
     )
     fun noEncontrado(e: RuntimeException): ResponseEntity<Map<String, Any>> =
         respuesta(HttpStatus.NOT_FOUND, e.message ?: "Recurso no encontrado")
