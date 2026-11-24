@@ -190,4 +190,12 @@ class AlertaServiceTest {
 
         assertEquals(3L, alertaService.contarNoLeidas(hogarId))
     }
+
+    @Test
+    fun `marcarTodasComoLeidas delega en el repositorio y devuelve el numero de alertas actualizadas`() {
+        `when`(alertaRepository.marcarTodasComoLeidas(hogarId)).thenReturn(2)
+
+        assertEquals(2, alertaService.marcarTodasComoLeidas(hogarId))
+        verify(alertaRepository).marcarTodasComoLeidas(hogarId)
+    }
 }

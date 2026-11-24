@@ -23,3 +23,7 @@ data class AlertaResponse(
 data class ConteoAlertasResponse(
     val noLeidas: Long,
 )
+
+data class MarcarTodasLeidasResponse(
+    val actualizadas: Int,
+)

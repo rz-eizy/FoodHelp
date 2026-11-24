@@ -663,4 +663,66 @@ class AccesoEntreHogaresTest {
                     .header("Authorization", "Bearer " + jwtService.tokenParaUsuario(sinHogar)),
             ).andExpect(status().isForbidden)
     }
+
+    @Test
+    fun `marcar todas las alertas propias deja el contador a cero sin afectar otro hogar`() {
+        val propiaUno = alertaDe(articulo(hogarPropio, 3))
+        val propiaDos = alertaDe(articulo(hogarPropio, 4))
+        val propiaLeida = articulo(hogarPropio, 5)
+        alertaRepository.save(
+            Alerta(
+                articuloId = propiaLeida.id!!,
+                nombreProducto = propiaLeida.nombre,
+                diasRestantes = 5,
+                hogarId = hogarPropio.id!!,
+                leida = true,
+                fechaCreacion = LocalDate.now(),
+            ),
+        )
+        val ajena = articulo(hogarAjeno, 6)
+        val alertaAjena =
+            alertaRepository.save(
+                Alerta(
+                    articuloId = ajena.id!!,
+                    nombreProducto = ajena.nombre,
+                    diasRestantes = 6,
+                    hogarId = hogarAjeno.id!!,
+                    leida = false,
+                    fechaCreacion = LocalDate.now(),
+                ),
+            )
+
+        mockMvc
+            .perform(post("/api/alertas/marcar-todas-leidas").header("Authorization", bearerAna))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.actualizadas").value(2))
+
+        assertTrue(alertaRepository.findById(propiaUno.id!!).get().leida)
+        assertTrue(alertaRepository.findById(propiaDos.id!!).get().leida)
+        assertFalse(alertaRepository.findById(alertaAjena.id!!).get().leida)
+
+        mockMvc
+            .perform(get("/api/alertas/no-leidas/contador").header("Authorization", bearerAna))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.noLeidas").value(0))
+    }
+
+    @Test
+    fun `marcar todas las alertas sin token responde 401`() {
+        mockMvc.perform(post("/api/alertas/marcar-todas-leidas")).andExpect(status().isUnauthorized)
+    }
+
+    @Test
+    fun `marcar todas las alertas sin hogar responde 403`() {
+        val sinHogar =
+            usuarioRepository.save(
+                Usuario(nombre = "Sin Hogar", contrasena = "no-importa", correo = "sinhogar@test.com"),
+            )
+
+        mockMvc
+            .perform(
+                post("/api/alertas/marcar-todas-leidas")
+                    .header("Authorization", "Bearer " + jwtService.tokenParaUsuario(sinHogar)),
+            ).andExpect(status().isForbidden)
+    }
 }

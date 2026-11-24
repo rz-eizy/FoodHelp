@@ -47,6 +47,9 @@ class AlertaService(
     fun contarNoLeidas(hogarId: UUID): Long = alertaRepository.countByHogarIdAndLeidaFalse(hogarId)
 
     @Transactional
+    fun marcarTodasComoLeidas(hogarId: UUID): Int = alertaRepository.marcarTodasComoLeidas(hogarId)
+
+    @Transactional
     fun marcarComoLeida(
         alertaId: UUID,
         hogarId: UUID,
