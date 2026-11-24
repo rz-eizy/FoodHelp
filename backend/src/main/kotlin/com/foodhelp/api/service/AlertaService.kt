@@ -24,9 +24,23 @@ class AlertaService(
         hogarId: UUID,
         page: Int,
         size: Int,
+    ): List<AlertaResponse> = listarPorHogar(hogarId, page, size, null)
+
+    @Transactional(readOnly = true)
+    fun listarPorHogar(
+        hogarId: UUID,
+        page: Int,
+        size: Int,
+        leida: Boolean?,
     ): List<AlertaResponse> {
         val pageable = Paginacion.de(page, size, Sort.by(Sort.Order.desc("fechaCreacion"), Sort.Order.asc("id")))
-        return alertaRepository.findByHogarId(hogarId, pageable).content.map { it.toResponse() }
+        val alertas =
+            if (leida == null) {
+                alertaRepository.findByHogarId(hogarId, pageable)
+            } else {
+                alertaRepository.findByHogarIdAndLeida(hogarId, leida, pageable)
+            }
+        return alertas.content.map { it.toResponse() }
     }
 
     @Transactional

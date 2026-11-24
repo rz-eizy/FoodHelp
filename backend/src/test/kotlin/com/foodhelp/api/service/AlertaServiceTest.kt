@@ -160,4 +160,27 @@ class AlertaServiceTest {
     fun `vencido es verdadero cuando la fecha ya paso`() {
         assertEquals(true, respuestaConDias(-1).vencido)
     }
+
+    @Test
+    fun `listarPorHogar filtra por el estado de lectura solicitado`() {
+        val alerta =
+            Alerta(
+                id = UUID.randomUUID(),
+                articuloId = UUID.randomUUID(),
+                nombreProducto = "Leche",
+                diasRestantes = 2,
+                hogarId = hogarId,
+                leida = false,
+                fechaCreacion = hoy,
+            )
+        val pageable =
+            Paginacion.de(0, 10, Sort.by(Sort.Order.desc("fechaCreacion"), Sort.Order.asc("id")))
+        `when`(alertaRepository.findByHogarIdAndLeida(hogarId, false, pageable)).thenReturn(PageImpl(listOf(alerta)))
+
+        val respuesta = alertaService.listarPorHogar(hogarId, 0, 10, false)
+
+        assertEquals(1, respuesta.size)
+        assertEquals("Leche", respuesta[0].nombreProducto)
+        assertFalse(respuesta[0].leida)
+    }
 }

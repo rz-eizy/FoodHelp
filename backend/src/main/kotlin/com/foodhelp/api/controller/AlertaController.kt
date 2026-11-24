@@ -23,8 +23,17 @@ class AlertaController(
     fun obtenerAlertasDelHogar(
         @RequestParam(defaultValue = "0") page: Int,
         @RequestParam(defaultValue = "${Paginacion.TAMANO_POR_DEFECTO}") size: Int,
-    ): ResponseEntity<List<AlertaResponse>> =
-        ResponseEntity.ok(alertaService.listarPorHogar(usuarioActualService.hogarIdActual(), page, size))
+        @RequestParam(required = false) leida: Boolean?,
+    ): ResponseEntity<List<AlertaResponse>> {
+        val hogarId = usuarioActualService.hogarIdActual()
+        val alertas =
+            if (leida == null) {
+                alertaService.listarPorHogar(hogarId, page, size)
+            } else {
+                alertaService.listarPorHogar(hogarId, page, size, leida)
+            }
+        return ResponseEntity.ok(alertas)
+    }
 
     @GetMapping("/hogar/{hogarId}")
     fun obtenerAlertasPorHogarId(

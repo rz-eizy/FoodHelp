@@ -565,4 +565,50 @@ class AccesoEntreHogaresTest {
             .andExpect(jsonPath("$[0].diasRestantes").value(-2))
             .andExpect(jsonPath("$[0].vencido").value(true))
     }
+
+    @Test
+    fun `filtrar alertas por leida false devuelve solo las no leidas del hogar actual`() {
+        val propioNoLeida = articulo(hogarPropio, 3)
+        alertaDe(propioNoLeida)
+        val propioLeida = articulo(hogarPropio, 4)
+        alertaRepository.save(
+            Alerta(
+                articuloId = propioLeida.id!!,
+                nombreProducto = propioLeida.nombre,
+                diasRestantes = 4,
+                hogarId = hogarPropio.id!!,
+                leida = true,
+                fechaCreacion = LocalDate.now(),
+            ),
+        )
+
+        mockMvc
+            .perform(get("/api/alertas?leida=false").header("Authorization", bearerAna))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.length()").value(1))
+            .andExpect(jsonPath("$[0].leida").value(false))
+    }
+
+    @Test
+    fun `filtrar alertas por leida true devuelve solo las leidas del hogar actual`() {
+        val propioNoLeida = articulo(hogarPropio, 3)
+        alertaDe(propioNoLeida)
+        val propioLeida = articulo(hogarPropio, 4)
+        alertaRepository.save(
+            Alerta(
+                articuloId = propioLeida.id!!,
+                nombreProducto = propioLeida.nombre,
+                diasRestantes = 4,
+                hogarId = hogarPropio.id!!,
+                leida = true,
+                fechaCreacion = LocalDate.now(),
+            ),
+        )
+
+        mockMvc
+            .perform(get("/api/alertas?leida=true").header("Authorization", bearerAna))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.length()").value(1))
+            .andExpect(jsonPath("$[0].leida").value(true))
+    }
 }
