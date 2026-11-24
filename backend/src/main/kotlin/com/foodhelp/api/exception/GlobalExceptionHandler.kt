@@ -1,7 +1,9 @@
 package com.foodhelp.api.exception
 
 import org.slf4j.LoggerFactory
+import org.springframework.dao.CannotAcquireLockException
 import org.springframework.dao.DataIntegrityViolationException
+import org.springframework.dao.PessimisticLockingFailureException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.http.converter.HttpMessageNotReadableException
@@ -40,6 +42,15 @@ class GlobalExceptionHandler {
         UsuarioSinHogarException::class,
     )
     fun conflicto(e: RuntimeException): ResponseEntity<Map<String, Any>> = respuesta(HttpStatus.CONFLICT, e.message ?: "Conflicto")
+
+    @ExceptionHandler(
+        PessimisticLockingFailureException::class,
+        CannotAcquireLockException::class,
+    )
+    fun bloqueoConcurrente(e: RuntimeException): ResponseEntity<Map<String, Any>> {
+        log.warn("Conflicto de bloqueo concurrente: {}", e.message)
+        return respuesta(HttpStatus.CONFLICT, "Operación en conflicto, inténtalo de nuevo")
+    }
 
     @ExceptionHandler(CredencialesInvalidasException::class)
     fun credencialesInvalidas(e: CredencialesInvalidasException): ResponseEntity<Map<String, Any>> =

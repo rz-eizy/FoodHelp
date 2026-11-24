@@ -40,15 +40,17 @@ class HogarService(
 ) {
     @Transactional
     fun salirDelHogar() {
-        val usuario = usuarioActualService.usuarioActual()
-        val hogar = usuario.hogar ?: throw UsuarioSinHogarException()
+        val usuarioInicial = usuarioActualService.usuarioActual()
+        if (usuarioInicial.hogar == null) throw UsuarioSinHogarException()
+        val (hogar, usuario) = hogarYUsuarioBloqueados(usuarioInicial)
         retirarMiembro(usuario, hogar)
     }
 
     @Transactional
     fun expulsarMiembro(usuarioId: UUID) {
-        val actor = usuarioActualService.usuarioActual()
-        val hogar = actor.hogar ?: throw UsuarioSinHogarException()
+        val actorInicial = usuarioActualService.usuarioActual()
+        if (actorInicial.hogar == null) throw UsuarioSinHogarException()
+        val (hogar, actor) = hogarYUsuarioBloqueados(actorInicial)
         if (hogar.propietarioId != actor.id) {
             throw AccesoDenegadoException("Solo el propietario del hogar puede expulsar integrantes")
         }
@@ -71,6 +73,22 @@ class HogarService(
                 expulsadoEn = Instant.now(clock),
             ),
         )
+    }
+
+    // Orden fijo de bloqueo (hogar -> usuario) para evitar interbloqueos entre operaciones concurrentes
+    private fun hogarYUsuarioBloqueados(usuarioInicial: Usuario): Pair<Hogar, Usuario> {
+        val hogarId = checkNotNull(usuarioInicial.hogar?.id)
+        val hogar =
+            hogarRepository.buscarParaActualizar(hogarId)
+                ?: throw HogarNotFoundException(hogarId.toString())
+        val usuario =
+            usuarioRepository.buscarParaActualizar(usuarioInicial.correo)
+                ?: throw UsuarioSinHogarException()
+        if (usuario.hogar?.id != hogar.id) {
+            if (usuario.hogar == null) throw UsuarioSinHogarException()
+            throw UsuarioYaEnHogarException()
+        }
+        return hogar to usuario
     }
 
     private fun retirarMiembro(
@@ -100,7 +118,11 @@ class HogarService(
 
     @Transactional
     fun crearHogar(request: CreateHogarRequest): HogarResponse {
-        val usuario = usuarioActualService.usuarioActual()
+        val usuarioInicial = usuarioActualService.usuarioActual()
+        if (usuarioInicial.hogar != null) throw UsuarioYaEnHogarException()
+        val usuario =
+            usuarioRepository.buscarParaActualizar(usuarioInicial.correo)
+                ?: throw UsuarioSinHogarException()
         if (usuario.hogar != null) throw UsuarioYaEnHogarException()
 
         val hogar =
@@ -121,10 +143,10 @@ class HogarService(
 
     @Transactional
     fun unirseAHogar(request: JoinHogarRequest): HogarResponse {
-        val usuario = usuarioActualService.usuarioActual()
-        if (usuario.hogar != null) throw UsuarioYaEnHogarException()
+        val usuarioInicial = usuarioActualService.usuarioActual()
+        if (usuarioInicial.hogar != null) throw UsuarioYaEnHogarException()
 
-        val clave = usuario.correo
+        val clave = usuarioInicial.correo
         limitadorUnirse.exigirDisponible(clave)
 
         val codigo = request.codigoHogar.trim().uppercase()
@@ -137,19 +159,25 @@ class HogarService(
                 throw e
             }
 
-        val hogarId = checkNotNull(hogar.id)
+        val hogarBloqueado =
+            hogarRepository.buscarParaActualizar(checkNotNull(hogar.id))
+                ?: throw HogarNotFoundException(codigo)
+        val usuario = usuarioRepository.buscarParaActualizar(clave) ?: throw UsuarioSinHogarException()
+        if (usuario.hogar != null) throw UsuarioYaEnHogarException()
+
+        val hogarId = checkNotNull(hogarBloqueado.id)
         if (hogarExpulsadoRepository.existsByHogarIdAndUsuarioId(hogarId, checkNotNull(usuario.id))) {
             throw AccesoDenegadoException("No puedes unirte a este hogar")
         }
 
-        usuario.hogar = hogar
+        usuario.hogar = hogarBloqueado
         usuario.hogarDesde = Instant.now(clock)
-        hogar.usuarios.add(usuario)
-        if (hogar.propietarioId == null) {
-            hogar.propietarioId = usuario.id
+        hogarBloqueado.usuarios.add(usuario)
+        if (hogarBloqueado.propietarioId == null) {
+            hogarBloqueado.propietarioId = usuario.id
         }
         limitadorUnirse.reiniciar(clave)
-        return hogar.toResponse(usuario.id)
+        return hogarBloqueado.toResponse(usuario.id)
     }
 
     @Transactional(readOnly = true)

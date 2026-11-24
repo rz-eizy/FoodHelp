@@ -574,4 +574,30 @@ class HogarControllerTest {
             ).andExpect(status().isConflict)
             .andExpect(jsonPath("$.error").value("El usuario no pertenece a ningún hogar"))
     }
+
+    @Test
+    fun `crear un hogar dos veces responde 409 al segundo intento sin dejar hogares vacios`() {
+        val usuario = usuarioRepository.save(Usuario(nombre = "DosVeces", contrasena = "pass123", correo = "dos-veces@test.com"))
+        val token = "Bearer " + jwtService.tokenParaUsuario(usuario)
+        val request = CreateHogarRequest(nombre = "Mi Casa")
+        val totalAntes = hogarRepository.count()
+
+        mockMvc
+            .perform(
+                post("/api/hogares")
+                    .header("Authorization", token)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)),
+            ).andExpect(status().isCreated)
+
+        mockMvc
+            .perform(
+                post("/api/hogares")
+                    .header("Authorization", token)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)),
+            ).andExpect(status().isConflict)
+
+        assertEquals(totalAntes + 1, hogarRepository.count())
+    }
 }
