@@ -2,7 +2,6 @@ package com.foodhelp.api.service
 
 import com.foodhelp.api.dto.AlertaDTO
 import com.foodhelp.api.models.Alerta
-import com.foodhelp.api.models.ArticuloDespensa
 import com.foodhelp.api.repository.AlertaRepository
 import com.foodhelp.api.repository.ArticuloRepository
 import org.slf4j.LoggerFactory
@@ -15,7 +14,6 @@ import java.time.temporal.ChronoUnit
 @Service
 class MonitorCaducidadService(
     private val articuloRepository: ArticuloRepository,
-    private val recetaIntegrationService: RecetaIntegrationService,
     private val alertaRepository: AlertaRepository,
     private val clock: Clock,
 ) {
@@ -25,12 +23,12 @@ class MonitorCaducidadService(
     @Scheduled(cron = "\${app.monitor.cron:0 0 8 * * ?}", zone = "\${app.zona-horaria:UTC}")
     fun ejecutarMonitoreo(): List<AlertaDTO> {
         val hoy = LocalDate.now(clock)
-        val fechaLimite = hoy.plusDays(DIAS_ANTICIPACION)
+        val fechaLimite = hoy.plusDays(AlertaService.DIAS_ANTICIPACION.toLong())
 
-        log.info("Iniciando monitoreo diario de caducidad para articulos entre {} y {}", hoy, fechaLimite)
+        log.info("Iniciando monitoreo diario de caducidad hasta {}", fechaLimite)
 
-        // Solo artículos con stock y con el hogar cargado para evitar consultas N+1
-        val articulos = articuloRepository.findPorVencerConHogar(hoy, fechaLimite)
+        // Incluye vencidos: mientras haya stock, la alerta debe seguir viva con días negativos
+        val articulos = articuloRepository.findConAlertaActiva(fechaLimite)
         if (articulos.isEmpty()) return emptyList()
 
         // Una alerta por artículo: se actualiza la existente en lugar de duplicarla
@@ -45,13 +43,18 @@ class MonitorCaducidadService(
                 val vencimiento = articulo.fechaVencimiento ?: return@mapNotNull null
                 val dias = ChronoUnit.DAYS.between(hoy, vencimiento).toInt()
 
-                existentes[articuloId]?.apply { diasRestantes = dias }
+                existentes[articuloId]?.apply {
+                    val diasAnteriores = diasRestantes
+                    diasRestantes = dias
+                    if (dias < 0 && diasAnteriores >= 0) leida = false
+                }
                     ?: Alerta(
                         articuloId = articuloId,
                         nombreProducto = articulo.nombre,
                         diasRestantes = dias,
                         hogarId = checkNotNull(articulo.hogar.id),
                         fechaCreacion = hoy,
+                        leida = false,
                     )
             }
         alertaRepository.saveAll(alertas)
@@ -72,35 +75,6 @@ class MonitorCaducidadService(
                 it.diasRestantes,
             )
         }
-
-        sugerirRecetasPorHogar(articulos)
         return alertasDto
-    }
-
-    private fun sugerirRecetasPorHogar(articulos: List<ArticuloDespensa>) {
-        articulos.groupBy { checkNotNull(it.hogar.id) }.forEach { (hogarId, delHogar) ->
-            val ingredientesCriticos =
-                delHogar
-                    .sortedBy { it.fechaVencimiento }
-                    .take(MAX_INGREDIENTES)
-                    .map { it.nombre }
-
-            val titulos =
-                recetaIntegrationService
-                    .obtenerRecetasPorIngredientes(ingredientesCriticos)
-                    .map { it.title }
-
-            log.info(
-                "Hogar ID: {} | Ingredientes críticos: {} | Recetas sugeridas: {}",
-                hogarId,
-                ingredientesCriticos,
-                titulos,
-            )
-        }
-    }
-
-    private companion object {
-        const val DIAS_ANTICIPACION = 10L
-        const val MAX_INGREDIENTES = 3
     }
 }

@@ -51,4 +51,8 @@ class AlertaService(
             leida = leida,
             fechaCreacion = fechaCreacion,
         )
+
+    companion object {
+        const val DIAS_ANTICIPACION = 10
+    }
 }
