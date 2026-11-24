@@ -160,4 +160,42 @@ class AlertaServiceTest {
     fun `vencido es verdadero cuando la fecha ya paso`() {
         assertEquals(true, respuestaConDias(-1).vencido)
     }
+
+    @Test
+    fun `listarPorHogar filtra por el estado de lectura solicitado`() {
+        val alerta =
+            Alerta(
+                id = UUID.randomUUID(),
+                articuloId = UUID.randomUUID(),
+                nombreProducto = "Leche",
+                diasRestantes = 2,
+                hogarId = hogarId,
+                leida = false,
+                fechaCreacion = hoy,
+            )
+        val pageable =
+            Paginacion.de(0, 10, Sort.by(Sort.Order.desc("fechaCreacion"), Sort.Order.asc("id")))
+        `when`(alertaRepository.findByHogarIdAndLeida(hogarId, false, pageable)).thenReturn(PageImpl(listOf(alerta)))
+
+        val respuesta = alertaService.listarPorHogar(hogarId, 0, 10, false)
+
+        assertEquals(1, respuesta.size)
+        assertEquals("Leche", respuesta[0].nombreProducto)
+        assertFalse(respuesta[0].leida)
+    }
+
+    @Test
+    fun `contarNoLeidas devuelve el conteo del repositorio para el hogar`() {
+        `when`(alertaRepository.countByHogarIdAndLeidaFalse(hogarId)).thenReturn(3L)
+
+        assertEquals(3L, alertaService.contarNoLeidas(hogarId))
+    }
+
+    @Test
+    fun `marcarTodasComoLeidas delega en el repositorio y devuelve el numero de alertas actualizadas`() {
+        `when`(alertaRepository.marcarTodasComoLeidas(hogarId)).thenReturn(2)
+
+        assertEquals(2, alertaService.marcarTodasComoLeidas(hogarId))
+        verify(alertaRepository).marcarTodasComoLeidas(hogarId)
+    }
 }

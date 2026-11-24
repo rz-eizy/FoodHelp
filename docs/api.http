@@ -179,6 +179,10 @@ Authorization: Bearer {{token}}
 GET {{baseUrl}}/api/alertas?page=0&size=10
 Authorization: Bearer {{token}}
 
+### 6.2b. Listar solo alertas no leídas (o use leida=true para las leídas)
+GET {{baseUrl}}/api/alertas?leida=false&page=0&size=10
+Authorization: Bearer {{token}}
+
 ### 6.3. Listar alertas por hogarId
 # Requiere pertenencia al hogar (403 si es ajeno).
 GET {{baseUrl}}/api/alertas/hogar/{{hogarId}}?page=0&size=50
@@ -188,6 +192,16 @@ Authorization: Bearer {{token}}
 # HTTP 200 OK -> AlertaResponse con leida: true
 @alertaId = 8b5d0c73-4567-4890-abcd-112233445566
 PATCH {{baseUrl}}/api/alertas/{{alertaId}}/leida
+Authorization: Bearer {{token}}
+
+### 6.5. Contar alertas no leídas del hogar actual
+# HTTP 200 OK -> {"noLeidas": 3}
+GET {{baseUrl}}/api/alertas/no-leidas/contador
+Authorization: Bearer {{token}}
+
+### 6.6. Marcar todas las alertas no leídas como leídas
+# Solo afecta al hogar del usuario. HTTP 200 OK -> {"actualizadas": 3}
+POST {{baseUrl}}/api/alertas/marcar-todas-leidas
 Authorization: Bearer {{token}}
 
 ###############################################################################

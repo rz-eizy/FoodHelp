@@ -2,12 +2,15 @@ package com.foodhelp.api.controller
 
 import com.foodhelp.api.config.Paginacion
 import com.foodhelp.api.dto.AlertaResponse
+import com.foodhelp.api.dto.ConteoAlertasResponse
+import com.foodhelp.api.dto.MarcarTodasLeidasResponse
 import com.foodhelp.api.security.UsuarioActualService
 import com.foodhelp.api.service.AlertaService
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
@@ -23,8 +26,25 @@ class AlertaController(
     fun obtenerAlertasDelHogar(
         @RequestParam(defaultValue = "0") page: Int,
         @RequestParam(defaultValue = "${Paginacion.TAMANO_POR_DEFECTO}") size: Int,
-    ): ResponseEntity<List<AlertaResponse>> =
-        ResponseEntity.ok(alertaService.listarPorHogar(usuarioActualService.hogarIdActual(), page, size))
+        @RequestParam(required = false) leida: Boolean?,
+    ): ResponseEntity<List<AlertaResponse>> {
+        val hogarId = usuarioActualService.hogarIdActual()
+        val alertas =
+            if (leida == null) {
+                alertaService.listarPorHogar(hogarId, page, size)
+            } else {
+                alertaService.listarPorHogar(hogarId, page, size, leida)
+            }
+        return ResponseEntity.ok(alertas)
+    }
+
+    @GetMapping("/no-leidas/contador")
+    fun contarAlertasNoLeidas(): ResponseEntity<ConteoAlertasResponse> =
+        ResponseEntity.ok(ConteoAlertasResponse(alertaService.contarNoLeidas(usuarioActualService.hogarIdActual())))
+
+    @PostMapping("/marcar-todas-leidas")
+    fun marcarTodasComoLeidas(): ResponseEntity<MarcarTodasLeidasResponse> =
+        ResponseEntity.ok(MarcarTodasLeidasResponse(alertaService.marcarTodasComoLeidas(usuarioActualService.hogarIdActual())))
 
     @GetMapping("/hogar/{hogarId}")
     fun obtenerAlertasPorHogarId(

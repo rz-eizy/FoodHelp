@@ -19,3 +19,11 @@ data class AlertaResponse(
     val fechaCreacion: LocalDate,
     val vencido: Boolean = diasRestantes < 0,
 )
+
+data class ConteoAlertasResponse(
+    val noLeidas: Long,
+)
+
+data class MarcarTodasLeidasResponse(
+    val actualizadas: Int,
+)
