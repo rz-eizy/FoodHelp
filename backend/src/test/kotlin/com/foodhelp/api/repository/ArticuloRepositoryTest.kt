@@ -93,4 +93,45 @@ class ArticuloRepositoryTest {
         assertEquals(1, lista.size)
         assertEquals("Arroz", lista[0].nombre)
     }
+
+    @Test
+    fun `findConAlertaActiva incluye vencidos y excluye agotados y lejanos`() {
+        val hogar = hogarRepository.saveAndFlush(Hogar(nombre = "Hogar Monitor", codigoHogar = "MONITOR-01"))
+        val hoy = LocalDate.now()
+        listOf(
+            ArticuloDespensa(
+                nombre = "Vencido",
+                fechaVencimiento = hoy.minusDays(2),
+                cantidad = 2,
+                categoria = CategoriaEnum.LACTEOS,
+                hogar = hogar,
+            ),
+            ArticuloDespensa(
+                nombre = "Proximo",
+                fechaVencimiento = hoy.plusDays(3),
+                cantidad = 1,
+                categoria = CategoriaEnum.FRUTAS,
+                hogar = hogar,
+            ),
+            ArticuloDespensa(
+                nombre = "Lejano",
+                fechaVencimiento = hoy.plusDays(30),
+                cantidad = 1,
+                categoria = CategoriaEnum.DESPENSA,
+                hogar = hogar,
+            ),
+            ArticuloDespensa(
+                nombre = "Agotado",
+                fechaVencimiento = hoy.plusDays(2),
+                cantidad = 0,
+                categoria = CategoriaEnum.PANADERIA,
+                hogar = hogar,
+            ),
+        ).forEach { articuloRepository.saveAndFlush(it) }
+
+        val activas = articuloRepository.findConAlertaActiva(hoy.plusDays(10)).map { it.nombre }
+
+        assertEquals(2, activas.size)
+        assertEquals(setOf("Vencido", "Proximo"), activas.toSet())
+    }
 }
