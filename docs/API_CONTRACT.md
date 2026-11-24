@@ -421,6 +421,7 @@ Utilizado para clasificar los artículos del inventario de despensa:
 - **Query Params:**
   - `page`: Entero, default `0`.
   - `size`: Entero, default `50` (máx `100`).
+  - `leida`: Booleano opcional. Si se envía (`true` o `false`), filtra las alertas por su estado de lectura; si se omite, devuelve todas.
 - **Respuestas:**
   - `200 OK`:
     ```json
@@ -460,6 +461,29 @@ Utilizado para clasificar los artículos del inventario de despensa:
   - `401 Unauthorized`: Token inválido.
   - `404 Not Found`: Alerta inexistente o perteneciente a otro hogar.
   - `404 Not Found`: Alerta no encontrada.
+
+#### `GET /api/alertas/no-leidas/contador`
+- **Autenticación:** Requerida (`Bearer`).
+- **Descripción:** Devuelve el número de alertas no leídas del hogar del usuario autenticado. No incluye alertas de otros hogares.
+- **Respuestas:**
+  - `200 OK`:
+    ```json
+    {"noLeidas": 3}
+    ```
+  - `401 Unauthorized`: Token inválido.
+  - `403 Forbidden`: Usuario sin hogar.
+
+#### `POST /api/alertas/marcar-todas-leidas`
+- **Autenticación:** Requerida (`Bearer`).
+- **Descripción:** Marca como leídas todas las alertas no leídas del hogar del usuario autenticado en una sola actualización. Las alertas de otros hogares no se modifican.
+- **Respuestas:**
+  - `200 OK`:
+    ```json
+    {"actualizadas": 3}
+    ```
+    El número es cuántas alertas cambiaron de `leida: false` a `leida: true`.
+  - `401 Unauthorized`: Token inválido.
+  - `403 Forbidden`: Usuario sin hogar.
 
 ---
 
