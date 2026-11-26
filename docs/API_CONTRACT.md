@@ -44,18 +44,21 @@ Cuando el cliente móvil reciba un código `401 Unauthorized`:
 2. Limpiar la sesión en memoria (estado de los ViewModels).
 3. Redirigir al usuario de forma automática a la pantalla de Login mostrando un mensaje explicativo (ej. "Tu sesión ha expirado o ha sido cerrada en otro dispositivo. Por favor ingresa nuevamente").
 
-Un `403 Forbidden` **no** equivale a un 401: no se debe cerrar la sesión (p. ej. una contraseña incorrecta en una operación sensible devuelve 403). Un `429 Too Many Requests` se muestra como "demasiados intentos", sin borrar la sesión.
+El 401 incluye cuerpo JSON: `{"error": "No autenticado", "codigo": "NO_AUTENTICADO"}`.
+
+Un `403 Forbidden` **no** equivale a un 401: no se debe cerrar la sesión (p. ej. una contraseña incorrecta en una operación sensible devuelve 403). El `codigo` del 403 distingue `SIN_HOGAR`, `HOGAR_AJENO`, `NO_PROPIETARIO`, `EXPULSADO_DEL_HOGAR`, `CONTRASENA_INCORRECTA` y `ACCESO_DENEGADO`, sin necesidad de leer el texto. Un `429 Too Many Requests` se muestra como "demasiados intentos", sin borrar la sesión.
 
 ---
 
 ## 3. Esquema Estándar de Errores
 
-Todos los errores producidos en la aplicación siguen una estructura JSON homogénea.
+Todos los errores producidos en la aplicación —incluidos los de seguridad (401/403) y los generados por Spring (400/404/405/415/500)— siguen una estructura JSON homogénea con `error` (texto en español para la persona usuaria) y `codigo` (identificador estable para el cliente). El campo `campos` solo aparece en errores de validación.
 
 ### 3.1. Error General
 ```json
 {
-  "error": "Descripción legible en español del problema"
+  "error": "Descripción legible en español del problema",
+  "codigo": "SOLICITUD_INVALIDA"
 }
 ```
 
@@ -64,6 +67,7 @@ Producido cuando los campos del cuerpo no cumplen las validaciones Jakarta Valid
 ```json
 {
   "error": "Datos de entrada inválidos",
+  "codigo": "VALIDACION",
   "campos": {
     "correo": "El correo no es válido",
     "contrasena": "La contraseña debe tener entre 8 y 72 caracteres"
@@ -85,6 +89,40 @@ Producido cuando los campos del cuerpo no cumplen las validaciones Jakarta Valid
 | **409 Conflict** | Conflicto | Correo ya registrado, usuario ya pertenece a un hogar, o usuario intenta salir sin pertenecer a un hogar. |
 | **429 Too Many Requests** | Límite excedido | Bloqueo por fuerza bruta (más de 10 intentos fallidos en login, unirse a hogar o eliminar cuenta). |
 | **500 Internal Server Error** | Error del servidor | Error inesperado en el servidor backend. |
+
+### 3.4. Catálogo de códigos `codigo`
+
+El cliente debe decidir por `codigo`, nunca por el texto de `error` (que puede cambiar). Los textos y los status HTTP no cambian respecto a versiones anteriores salvo en los casos que antes caían en el JSON por defecto de Spring.
+
+| `codigo` | HTTP | Cuándo |
+| :--- | :--- | :--- |
+| `NO_AUTENTICADO` | 401 | Token ausente, inválido, expirado o revocado (`tv` desactualizado). |
+| `CREDENCIALES_INVALIDAS` | 401 | Login con correo o contraseña incorrectos (mensaje idéntico para ambos). |
+| `ACCESO_DENEGADO` | 403 | Cualquier 403 sin código más específico (incluye `AccessDeniedException` de Spring Security). |
+| `SIN_HOGAR` | 403 / 409 | El usuario no tiene hogar: 403 en inventario, alertas y recetas; 409 en salir y expulsar. |
+| `HOGAR_AJENO` | 403 | Ruta con `{hogarId}` de un hogar al que no pertenece. |
+| `NO_PROPIETARIO` | 403 | Expulsar sin ser el propietario. |
+| `EXPULSADO_DEL_HOGAR` | 403 | Unirse a un hogar del que fue expulsado. |
+| `CONTRASENA_INCORRECTA` | 403 | Eliminar cuenta con contraseña incorrecta. |
+| `VALIDACION` | 400 | Campos del cuerpo inválidos (lleva `campos`). |
+| `SOLICITUD_INVALIDA` | 400 | Regla de negocio genérica (sin campos válidos, expulsarse a sí mismo, `cantidad < 1`…). |
+| `FECHA_VENCIMIENTO_PASADA` | 400 | Fecha de vencimiento anterior a hoy. |
+| `CANTIDAD_INSUFICIENTE` | 400 | Restar más de lo disponible. |
+| `INVENTARIO_VACIO` | 400 | Pedir sugerencias de recetas con el inventario vacío. |
+| `JSON_MALFORMADO` | 400 | Cuerpo ilegible. |
+| `PARAMETRO_INVALIDO` | 400 | UUID, número o enum inválido en ruta o query, o parámetro requerido ausente. |
+| `ARTICULO_NO_ENCONTRADO` | 404 | Artículo inexistente o de otro hogar (misma respuesta). |
+| `ALERTA_NO_ENCONTRADA` | 404 | Alerta inexistente o de otro hogar. |
+| `HOGAR_NO_ENCONTRADO` | 404 | Código de hogar inexistente o ajeno. |
+| `MIEMBRO_NO_ENCONTRADO` | 404 | Objetivo de expulsión inexistente o de otro hogar. |
+| `RUTA_NO_ENCONTRADA` | 404 | La ruta no existe (con token válido). |
+| `METODO_NO_PERMITIDO` | 405 | Método HTTP no soportado en esa ruta. |
+| `TIPO_CONTENIDO_NO_SOPORTADO` | 415 | `Content-Type` no soportado. |
+| `CORREO_YA_REGISTRADO` | 409 | Registro con correo existente. |
+| `USUARIO_YA_EN_HOGAR` | 409 | Crear o unirse a un hogar teniendo ya uno. |
+| `CONFLICTO` | 409 | Fallo de bloqueo pesimista o colisión de restricción UNIQUE. |
+| `DEMASIADOS_INTENTOS` | 429 | Límite de intentos fallidos excedido. |
+| `ERROR_INTERNO` | 500 | Error inesperado; el detalle nunca se expone al cliente. |
 
 ---
 
@@ -578,6 +616,7 @@ Se recomienda un único cliente Retrofit/OkHttp con un interceptor de petición 
   - Si el código es `403`: **no** cerrar la sesión; mostrar el error (p. ej. contraseña incorrecta en una operación sensible).
   - Si el código es `429`: mostrar "demasiados intentos" y esperar antes de reintentar.
   - Si el código es `400` y el JSON contiene `"campos"`: mapear las claves a los errores de los `TextField` correspondientes.
+   - Leer siempre el campo `codigo` (catálogo en §3.4), nunca el texto de `error`: `NO_AUTENTICADO` cierra la sesión; `CREDENCIALES_INVALIDAS` se muestra en Login; `CONFLICTO` permite reintentar la operación; `VALIDACION` rellena los `TextField` desde `campos`.
 
 ### 7.3. Manejo de Código de Invitación de Hogar
 - El código de hogar generado por el backend tiene exactamente 10 caracteres alfanuméricos.
