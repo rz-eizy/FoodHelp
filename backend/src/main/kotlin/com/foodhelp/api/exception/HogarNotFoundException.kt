@@ -6,4 +6,5 @@ import org.springframework.web.bind.annotation.ResponseStatus
 @ResponseStatus(HttpStatus.NOT_FOUND)
 class HogarNotFoundException(
     codigoHogar: String,
+    val codigo: CodigoError = CodigoError.HOGAR_NO_ENCONTRADO,
 ) : RuntimeException("Hogar con código '$codigoHogar' no encontrado")

@@ -5,6 +5,17 @@
 @token = eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhbmFAZWplbXBsby5jb20iLCJ0diI6MCwiaWF0IjoxNzAwMDAwMDAwLCJleHAiOjE3MDA2MDQ4MDB9.dummySignature
 
 ###############################################################################
+# 0. FORMATO DE ERRORES
+###############################################################################
+
+### 0.1. Ejemplo de respuesta de error (sin token)
+# Toda respuesta fallida es {"error": "texto en español", "codigo": "CODIGO"}.
+# En validacion (400) se añade "campos": {"campo": "mensaje"}.
+# Catalogo completo en docs/API_CONTRACT.md §3.4.
+GET {{baseUrl}}/api/alertas
+# HTTP 401 -> {"error": "No autenticado", "codigo": "NO_AUTENTICADO"}
+
+###############################################################################
 # 1. MONITOREO Y SALUD
 ###############################################################################
 

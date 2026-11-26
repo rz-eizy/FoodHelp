@@ -5,6 +5,7 @@ import com.foodhelp.api.dto.HogarResponse
 import com.foodhelp.api.dto.JoinHogarRequest
 import com.foodhelp.api.dto.UsuarioResponse
 import com.foodhelp.api.exception.AccesoDenegadoException
+import com.foodhelp.api.exception.CodigoError
 import com.foodhelp.api.exception.HogarNotFoundException
 import com.foodhelp.api.exception.MiembroNotFoundException
 import com.foodhelp.api.exception.SolicitudInvalidaException
@@ -49,7 +50,10 @@ class HogarService(
         if (actorInicial.hogar == null) throw UsuarioSinHogarException()
         val (hogar, actor) = hogarYUsuarioBloqueados(actorInicial)
         if (hogar.propietarioId != actor.id) {
-            throw AccesoDenegadoException("Solo el propietario del hogar puede expulsar integrantes")
+            throw AccesoDenegadoException(
+                "Solo el propietario del hogar puede expulsar integrantes",
+                CodigoError.NO_PROPIETARIO,
+            )
         }
         if (actor.id == usuarioId) {
             throw SolicitudInvalidaException("Para abandonar el hogar usa la opción de salir")
@@ -172,7 +176,7 @@ class HogarService(
 
         val hogarId = checkNotNull(hogarBloqueado.id)
         if (hogarExpulsadoRepository.existsByHogarIdAndUsuarioId(hogarId, checkNotNull(usuario.id))) {
-            throw AccesoDenegadoException("No puedes unirte a este hogar")
+            throw AccesoDenegadoException("No puedes unirte a este hogar", CodigoError.EXPULSADO_DEL_HOGAR)
         }
 
         usuario.hogar = hogarBloqueado
