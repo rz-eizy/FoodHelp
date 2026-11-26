@@ -38,6 +38,6 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
 ENTRYPOINT ["java", \
   "-XX:MaxRAMPercentage=75", \
   "-XX:+ExitOnOutOfMemoryError", \
-  "-Duser.timezone=UTC", \
+  "-Duser.timezone=America/Santiago", \
   "-Dspring.profiles.active=prod", \
   "-jar", "app.jar"]

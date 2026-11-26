@@ -194,4 +194,35 @@ class MonitorCaducidadServiceTest {
         assertFalse(alerta.leida)
         assertEquals(hoy, alerta.fechaCreacion)
     }
+
+    @Test
+    fun `Test 6 - el monitor calcula hoy en America Santiago`() {
+        val clockSantiago = Clock.fixed(Instant.parse("2026-11-26T01:30:00Z"), ZoneId.of("America/Santiago"))
+        val monitor = MonitorCaducidadService(articuloRepository, alertaRepository, clockSantiago)
+        val hoySantiago = LocalDate.now(clockSantiago)
+        val articulo =
+            ArticuloDespensa(
+                id = UUID.randomUUID(),
+                nombre = "Leche",
+                fechaVencimiento = LocalDate.of(2026, 11, 25),
+                cantidad = 1,
+                categoria = CategoriaEnum.LACTEOS,
+                hogar = hogar,
+            )
+        `when`(
+            articuloRepository.findConAlertaActiva(
+                hoySantiago.plusDays(AlertaService.DIAS_ANTICIPACION.toLong()),
+            ),
+        ).thenReturn(listOf(articulo))
+        `when`(alertaRepository.findByArticuloIdIn(anyCollection())).thenReturn(emptyList())
+
+        monitor.ejecutarMonitoreo()
+
+        @Suppress("UNCHECKED_CAST")
+        val captor = ArgumentCaptor.forClass(List::class.java) as ArgumentCaptor<List<Alerta>>
+        verify(alertaRepository).saveAll(capturarAlertas(captor))
+        val alerta = captor.value.single()
+        assertEquals(LocalDate.of(2026, 11, 25), alerta.fechaCreacion)
+        assertEquals(0, alerta.diasRestantes)
+    }
 }

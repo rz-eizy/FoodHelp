@@ -20,7 +20,7 @@ class MonitorCaducidadService(
     private val log = LoggerFactory.getLogger(MonitorCaducidadService::class.java)
 
     // El cron y el cálculo de fechas comparten la zona configurable; la JVM corre en UTC
-    @Scheduled(cron = "\${app.monitor.cron:0 0 8 * * ?}", zone = "\${app.zona-horaria:UTC}")
+    @Scheduled(cron = "\${app.monitor.cron:0 0 8 * * ?}", zone = "\${app.zona-horaria:America/Santiago}")
     fun ejecutarMonitoreo(): List<AlertaDTO> {
         val hoy = LocalDate.now(clock)
         val fechaLimite = hoy.plusDays(AlertaService.DIAS_ANTICIPACION.toLong())

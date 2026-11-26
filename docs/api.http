@@ -147,7 +147,7 @@ Authorization: Bearer {{token}}
 
 ### 5.4. Agregar nuevo artículo al inventario
 # Categorías válidas: LACTEOS, CARNES, VEGETALES, FRUTAS, BEBIDAS, PANADERIA, DESPENSA, CONGELADOS, OTROS.
-# fechaVencimiento debe ser formato YYYY-MM-DD y no puede ser anterior a hoy (400 con $.error). Hoy es valido.
+# fechaVencimiento debe ser formato YYYY-MM-DD y no puede ser anterior a hoy en la zona de negocio (America/Santiago por defecto, APP_TIMEZONE): 400 con $.codigo=FECHA_VENCIMIENTO_PASADA. Hoy es valido.
 # HTTP 201 Created -> ArticuloDTO
 POST {{baseUrl}}/api/inventario
 Authorization: Bearer {{token}}
@@ -163,7 +163,7 @@ Content-Type: application/json
 ### 5.5. Actualizar artículo parcialmente (PATCH)
 # articuloId debe ser UUID del artículo. Se puede modificar nombre, fechaVencimiento, cantidad, categoria.
 # Enviar cantidad 0 elimina el articulo y sus alertas: responde 200 con cantidad 0 y no aplica los demas campos.
-# La fechaVencimiento no puede ser anterior a hoy (400).
+# La fechaVencimiento no puede ser anterior a hoy en la zona de negocio (America/Santiago por defecto, APP_TIMEZONE): 400 con $.codigo=FECHA_VENCIMIENTO_PASADA.
 # HTTP 200 OK -> ArticuloDTO actualizado
 @articuloId = 1a2b3c4d-0000-0000-0000-000000000001
 PATCH {{baseUrl}}/api/inventario/{{articuloId}}
