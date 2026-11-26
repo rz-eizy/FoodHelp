@@ -1,9 +1,10 @@
 package com.foodhelp.api.controller
 
+import com.foodhelp.api.exception.CodigoError
+import com.foodhelp.api.exception.SolicitudInvalidaException
 import com.foodhelp.api.security.UsuarioActualService
 import com.foodhelp.api.service.InventarioService
 import com.foodhelp.api.service.RecetaIntegrationService
-import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
@@ -22,8 +23,9 @@ class RecetaController(
 
         val inventario = inventarioService.obtenerInventarioVigente(hogarId)
         if (inventario.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
-                mapOf("error" to "El inventario del hogar está vacío"),
+            throw SolicitudInvalidaException(
+                "El inventario del hogar está vacío",
+                CodigoError.INVENTARIO_VACIO,
             )
         }
 

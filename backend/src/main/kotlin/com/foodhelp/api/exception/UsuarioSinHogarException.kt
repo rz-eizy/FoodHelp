@@ -6,4 +6,5 @@ import org.springframework.web.bind.annotation.ResponseStatus
 @ResponseStatus(HttpStatus.CONFLICT)
 class UsuarioSinHogarException(
     mensaje: String = "El usuario no pertenece a ningún hogar",
+    val codigo: CodigoError = CodigoError.SIN_HOGAR,
 ) : RuntimeException(mensaje)

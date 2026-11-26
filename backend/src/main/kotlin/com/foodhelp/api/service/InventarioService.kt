@@ -7,6 +7,7 @@ import com.foodhelp.api.dto.CrearArticuloRequest
 import com.foodhelp.api.exception.ArticuloNotFoundException
 import com.foodhelp.api.exception.CantidadInsuficienteException
 import com.foodhelp.api.exception.CantidadInvalidaException
+import com.foodhelp.api.exception.CodigoError
 import com.foodhelp.api.exception.HogarNotFoundException
 import com.foodhelp.api.exception.SolicitudInvalidaException
 import com.foodhelp.api.models.ArticuloDespensa
@@ -172,7 +173,10 @@ class InventarioService(
 
     private fun validarFechaVencimiento(fechaVencimiento: LocalDate) {
         if (fechaVencimiento.isBefore(LocalDate.now(clock))) {
-            throw SolicitudInvalidaException("La fecha de vencimiento no puede ser anterior a hoy")
+            throw SolicitudInvalidaException(
+                "La fecha de vencimiento no puede ser anterior a hoy",
+                CodigoError.FECHA_VENCIMIENTO_PASADA,
+            )
         }
     }
 }
