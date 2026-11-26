@@ -10,6 +10,6 @@ import java.time.ZoneId
 class ClockConfig {
     @Bean
     fun clock(
-        @Value("\${app.zona-horaria:UTC}") zona: String,
+        @Value("\${app.zona-horaria:America/Santiago}") zona: String,
     ): Clock = Clock.system(ZoneId.of(zona))
 }
