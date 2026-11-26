@@ -246,3 +246,9 @@ Authorization: Bearer {{token}}
 # Si el inventario del hogar está vacío -> HTTP 400 Bad Request {"error": "El inventario del hogar está vacío"}
 GET {{baseUrl}}/api/recetas/sugerencias
 Authorization: Bearer {{token}}
+
+### 7.2. Obtener detalle de receta por id
+# id entero >= 1. Cache de 6 horas por receta (detalle-recetas).
+# 400 PARAMETRO_INVALIDO / SOLICITUD_INVALIDA · 403 SIN_HOGAR · 404 RECETA_NO_ENCONTRADA · 502 SERVICIO_EXTERNO_NO_DISPONIBLE.
+GET {{baseUrl}}/api/recetas/716429
+Authorization: Bearer {{token}}

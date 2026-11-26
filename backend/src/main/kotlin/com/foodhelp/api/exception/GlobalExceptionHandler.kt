@@ -92,6 +92,14 @@ class GlobalExceptionHandler {
             e.codigo,
         )
 
+    @ExceptionHandler(RecetaNoEncontradaException::class)
+    fun recetaNoEncontrada(e: RecetaNoEncontradaException): ResponseEntity<ErrorRespuesta> =
+        respuesta(HttpStatus.NOT_FOUND, e.message ?: "Receta no encontrada", e.codigo)
+
+    @ExceptionHandler(ServicioExternoNoDisponibleException::class)
+    fun servicioExternoNoDisponible(e: ServicioExternoNoDisponibleException): ResponseEntity<ErrorRespuesta> =
+        respuesta(HttpStatus.BAD_GATEWAY, e.message ?: "Servicio externo no disponible", e.codigo)
+
     @ExceptionHandler(MethodArgumentNotValidException::class)
     fun validacion(e: MethodArgumentNotValidException): ResponseEntity<ErrorRespuesta> {
         val campos = e.bindingResult.fieldErrors.associate { it.field to (it.defaultMessage ?: "valor inválido") }

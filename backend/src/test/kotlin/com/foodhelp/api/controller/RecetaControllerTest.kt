@@ -1,7 +1,13 @@
 package com.foodhelp.api.controller
 
 import com.foodhelp.api.dto.ArticuloDTO
+import com.foodhelp.api.dto.IngredienteRecetaDTO
+import com.foodhelp.api.dto.PasoRecetaDTO
+import com.foodhelp.api.dto.RecetaDetalleDTO
 import com.foodhelp.api.dto.RecetaExternaDTO
+import com.foodhelp.api.exception.AccesoDenegadoException
+import com.foodhelp.api.exception.CodigoError
+import com.foodhelp.api.exception.ServicioExternoNoDisponibleException
 import com.foodhelp.api.models.CategoriaEnum
 import com.foodhelp.api.repository.UsuarioRepository
 import com.foodhelp.api.security.JwtService
@@ -115,5 +121,94 @@ class RecetaControllerTest {
                     .contentType(MediaType.APPLICATION_JSON),
             ).andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.error").value("El inventario del hogar está vacío"))
+    }
+
+    @Test
+    @WithMockUser(username = "chef@foodhelp.com")
+    fun `Test 3 - detalle de receta con ingredientes y pasos`() {
+        `when`(usuarioActualService.hogarIdActual()).thenReturn(hogarId)
+        `when`(recetaIntegrationService.obtenerDetalleReceta(101)).thenReturn(
+            RecetaDetalleDTO(
+                id = 101,
+                title = "Pizza Margarita",
+                image = "https://img.spoonacular.com/pizza.jpg",
+                readyInMinutes = 25,
+                servings = 4,
+                ingredients =
+                    listOf(
+                        IngredienteRecetaDTO("tomate", 2.0, "unidad", "2 tomates"),
+                    ),
+                steps =
+                    listOf(
+                        PasoRecetaDTO(1, "Cortar el tomate"),
+                        PasoRecetaDTO(2, "Hornear 10 minutos"),
+                    ),
+            ),
+        )
+
+        mockMvc
+            .perform(get("/api/recetas/101"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.id").value(101))
+            .andExpect(jsonPath("$.title").value("Pizza Margarita"))
+            .andExpect(jsonPath("$.readyInMinutes").value(25))
+            .andExpect(jsonPath("$.servings").value(4))
+            .andExpect(jsonPath("$.ingredients[0].original").value("2 tomates"))
+            .andExpect(jsonPath("$.steps[0].number").value(1))
+            .andExpect(jsonPath("$.steps[1].step").value("Hornear 10 minutos"))
+    }
+
+    @Test
+    @WithMockUser(username = "chef@foodhelp.com")
+    fun `Test 4 - id cero responde 400 con codigo de solicitud invalida`() {
+        mockMvc
+            .perform(get("/api/recetas/0"))
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.codigo").value("SOLICITUD_INVALIDA"))
+    }
+
+    @Test
+    @WithMockUser(username = "chef@foodhelp.com")
+    fun `Test 5 - id no numerico responde 400 con codigo de parametro invalido`() {
+        mockMvc
+            .perform(get("/api/recetas/no-es-un-id"))
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.codigo").value("PARAMETRO_INVALIDO"))
+    }
+
+    @Test
+    @WithMockUser(username = "chef@foodhelp.com")
+    fun `Test 6 - detalle sin hogar responde 403 con codigo sin hogar`() {
+        `when`(usuarioActualService.hogarIdActual())
+            .thenThrow(AccesoDenegadoException("El usuario autenticado no está asociado a ningún hogar", CodigoError.SIN_HOGAR))
+
+        mockMvc
+            .perform(get("/api/recetas/101"))
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.codigo").value("SIN_HOGAR"))
+    }
+
+    @Test
+    @WithMockUser(username = "chef@foodhelp.com")
+    fun `Test 7 - receta inexistente responde 404 con su codigo`() {
+        `when`(usuarioActualService.hogarIdActual()).thenReturn(hogarId)
+        `when`(recetaIntegrationService.obtenerDetalleReceta(999)).thenReturn(null)
+
+        mockMvc
+            .perform(get("/api/recetas/999"))
+            .andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.codigo").value("RECETA_NO_ENCONTRADA"))
+    }
+
+    @Test
+    @WithMockUser(username = "chef@foodhelp.com")
+    fun `Test 8 - fallo del servicio externo responde 502 con su codigo`() {
+        `when`(usuarioActualService.hogarIdActual()).thenReturn(hogarId)
+        `when`(recetaIntegrationService.obtenerDetalleReceta(101)).thenThrow(ServicioExternoNoDisponibleException())
+
+        mockMvc
+            .perform(get("/api/recetas/101"))
+            .andExpect(status().isBadGateway)
+            .andExpect(jsonPath("$.codigo").value("SERVICIO_EXTERNO_NO_DISPONIBLE"))
     }
 }

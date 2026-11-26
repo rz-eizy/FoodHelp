@@ -86,10 +86,11 @@ Producido cuando los campos del cuerpo no cumplen las validaciones Jakarta Valid
 | **400 Bad Request** | Solicitud errónea | JSON malformado, validación de campos fallida, cantidad menor a 1, intentar actualizar artículo sin campos válidos, o inventario vacío al pedir recetas. |
 | **401 Unauthorized** | No autenticado | Token ausente, expirado, inválido, claim `tv` desactualizado, o credenciales erróneas en login. |
 | **403 Forbidden** | Prohibido | Usuario sin hogar asignado, peticiones a rutas con `{hogarId}` de un hogar al que no pertenece, o contraseña incorrecta al eliminar la cuenta. |
-| **404 Not Found** | No encontrado | Recurso inexistente o ajeno: artículo/alerta de otro hogar y `GET /api/hogares/{codigo}` con código inexistente o ajeno (respuesta uniforme por privacidad). |
+| **404 Not Found** | No encontrado | Recurso inexistente o ajeno: artículo/alerta de otro hogar, receta inexistente en Spoonacular y `GET /api/hogares/{codigo}` con código inexistente o ajeno (respuesta uniforme por privacidad). |
 | **409 Conflict** | Conflicto | Correo ya registrado, usuario ya pertenece a un hogar, o usuario intenta salir sin pertenecer a un hogar. |
 | **429 Too Many Requests** | Límite excedido | Bloqueo por fuerza bruta (más de 10 intentos fallidos en login, unirse a hogar o eliminar cuenta). |
 | **500 Internal Server Error** | Error del servidor | Error inesperado en el servidor backend. |
+| **502 Bad Gateway** | Proveedor no disponible | Fallo o timeout al consultar Spoonacular el detalle de una receta. |
 
 ### 3.4. Catálogo de códigos `codigo`
 
@@ -116,6 +117,7 @@ El cliente debe decidir por `codigo`, nunca por el texto de `error` (que puede c
 | `ALERTA_NO_ENCONTRADA` | 404 | Alerta inexistente o de otro hogar. |
 | `HOGAR_NO_ENCONTRADO` | 404 | Código de hogar inexistente o ajeno. |
 | `MIEMBRO_NO_ENCONTRADO` | 404 | Objetivo de expulsión inexistente o de otro hogar. |
+| `RECETA_NO_ENCONTRADA` | 404 | La receta no existe en Spoonacular (404 del proveedor, no se cachea). |
 | `RUTA_NO_ENCONTRADA` | 404 | La ruta no existe (con token válido). |
 | `METODO_NO_PERMITIDO` | 405 | Método HTTP no soportado en esa ruta. |
 | `TIPO_CONTENIDO_NO_SOPORTADO` | 415 | `Content-Type` no soportado. |
@@ -124,6 +126,7 @@ El cliente debe decidir por `codigo`, nunca por el texto de `error` (que puede c
 | `CONFLICTO` | 409 | Fallo de bloqueo pesimista o colisión de restricción UNIQUE. |
 | `DEMASIADOS_INTENTOS` | 429 | Límite de intentos fallidos excedido. |
 | `ERROR_INTERNO` | 500 | Error inesperado; el detalle nunca se expone al cliente. |
+| `SERVICIO_EXTERNO_NO_DISPONIBLE` | 502 | Fallo, timeout o error HTTP distinto de 404 de Spoonacular (no se cachea). |
 
 ---
 
@@ -585,6 +588,34 @@ Utilizado para clasificar los artículos del inventario de despensa:
     ```
   - `401 Unauthorized`: Token inválido.
   - `403 Forbidden`: Usuario sin hogar.
+
+#### `GET /api/recetas/{id}`
+- **Autenticación:** Requerida (`Bearer`) y con hogar asignado; sin hogar responde `403` con `codigo: SIN_HOGAR`.
+- **Descripción:** Devuelve el detalle de una receta de Spoonacular. El `id` debe ser entero ≥ 1. Se cachea en memoria 6 horas por receta en el namespace `detalle-recetas` (máximo 500 entradas): la segunda llamada no contacta al proveedor. Ni los 404 ni los fallos del proveedor se cachean.
+- **Parámetros de ruta:** `id` (entero ≥ 1).
+- **Respuestas:**
+  - `200 OK`:
+    ```json
+    {
+      "id": 716429,
+      "title": "Pasta with Garlic, Scallions, Cauliflower & Breadcrumbs",
+      "image": "https://img.spoonacular.com/recipes/716429-312x231.jpg",
+      "readyInMinutes": 25,
+      "servings": 4,
+      "ingredients": [
+        { "name": "pasta", "amount": 200.0, "unit": "g", "original": "200 g de pasta" }
+      ],
+      "steps": [
+        { "number": 1, "step": "Cook the pasta." }
+      ]
+    }
+    ```
+    `image`, `readyInMinutes` y `servings` pueden ser `null`. `steps` aplana todas las secciones de `analyzedInstructions` en orden y las renumera 1..n; sin instrucciones es `[]`. El contenido del proveedor llega en inglés (traducirlo es deuda).
+  - `400 Bad Request`: `id` no numérico (`PARAMETRO_INVALIDO`) o menor que 1 (`SOLICITUD_INVALIDA`).
+  - `401 Unauthorized`: Token inválido.
+  - `403 Forbidden`: Usuario sin hogar (`SIN_HOGAR`).
+  - `404 Not Found`: La receta no existe en Spoonacular (`RECETA_NO_ENCONTRADA`).
+  - `502 Bad Gateway`: Fallo o timeout de Spoonacular (`SERVICIO_EXTERNO_NO_DISPONIBLE`).
 
 ---
 

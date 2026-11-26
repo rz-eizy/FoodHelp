@@ -1,6 +1,11 @@
 package com.foodhelp.api.service
 
+import com.foodhelp.api.dto.DetalleRecetaExternaDTO
+import com.foodhelp.api.dto.IngredienteRecetaDTO
+import com.foodhelp.api.dto.PasoRecetaDTO
+import com.foodhelp.api.dto.RecetaDetalleDTO
 import com.foodhelp.api.dto.RecetaExternaDTO
+import com.foodhelp.api.exception.ServicioExternoNoDisponibleException
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.cache.annotation.Cacheable
@@ -53,6 +58,51 @@ class RecetaIntegrationService(
             emptyList()
         }
     }
+
+    @Cacheable(cacheNames = ["detalle-recetas"], key = "#p0", unless = "#result == null")
+    fun obtenerDetalleReceta(id: Int): RecetaDetalleDTO? =
+        try {
+            val externa =
+                restClient
+                    .get()
+                    .uri { uriBuilder ->
+                        uriBuilder
+                            .path("/recipes/{id}/information")
+                            .queryParam("includeNutrition", false)
+                            .build(id)
+                    }.accept(MediaType.APPLICATION_JSON)
+                    .retrieve()
+                    .body(DetalleRecetaExternaDTO::class.java)
+            externa?.let { aDetalle(it) }
+        } catch (ex: RestClientResponseException) {
+            if (ex.statusCode.value() == 404) {
+                log.info("Spoonacular no tiene la receta {}", id)
+                null
+            } else {
+                log.error("Spoonacular respondió con HTTP {}", ex.statusCode.value())
+                throw ServicioExternoNoDisponibleException()
+            }
+        } catch (ex: RestClientException) {
+            log.error("Fallo al consultar Spoonacular: {}", ex.javaClass.simpleName)
+            throw ServicioExternoNoDisponibleException()
+        }
+
+    private fun aDetalle(externa: DetalleRecetaExternaDTO) =
+        RecetaDetalleDTO(
+            id = externa.id,
+            title = externa.title,
+            image = externa.image,
+            readyInMinutes = externa.readyInMinutes,
+            servings = externa.servings,
+            ingredients =
+                externa.extendedIngredients.map {
+                    IngredienteRecetaDTO(it.name, it.amount, it.unit, it.original)
+                },
+            steps =
+                externa.analyzedInstructions
+                    .flatMap { it.steps }
+                    .mapIndexed { index, paso -> PasoRecetaDTO(index + 1, paso.step ?: "") },
+        )
 
     private companion object {
         const val MAX_RECETAS = 10
