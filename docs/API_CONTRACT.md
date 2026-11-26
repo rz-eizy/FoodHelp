@@ -10,6 +10,7 @@ Este documento detalla exhaustivamente el contrato HTTP y las especificaciones d
 - **Protocolo y Formato:** HTTP/1.1 o HTTP/2, `Content-Type: application/json; charset=UTF-8`
 - **Móvil First (Sin CORS):** El backend interactúa exclusivamente con el cliente móvil Android nativo. No hay soporte ni cabeceras CORS habilitadas.
 - **Formato de Fechas:** `YYYY-MM-DD` (ISO-8601 estándar, ej. `2026-12-31`).
+- **Zona horaria de negocio:** `America/Santiago` por defecto (configurable con `APP_TIMEZONE`). «Hoy», las fechas de vencimiento y el monitor de caducidad (cron de las 08:00) se calculan en esa zona, no en la zona UTC del servidor.
 - **Identificadores (IDs):** UUID versión 4 en minúsculas con guiones (ej. `3fa85f64-5717-4562-b3fc-2c963f66afa6`), salvo IDs de recetas externas de Spoonacular que son enteros (`Int`).
 - **Código de Hogar:** Cadena de exactamente 10 caracteres alfanuméricos en mayúsculas generada a partir de un alfabeto seguro de 32 símbolos sin caracteres visualmente ambiguos (`ABCDEFGHJKLMNPQRSTUVWXYZ23456789`, excluye `0`, `O`, `1`, `I`).
 
@@ -419,7 +420,7 @@ Utilizado para clasificar los artículos del inventario de despensa:
   }
   ```
   - `nombre`: String, obligatorio, máx 120 caracteres.
-  - `fechaVencimiento`: String fecha (`YYYY-MM-DD`), obligatorio. Debe ser hoy o futura; se valida en el servicio con el `Clock` inyectado (no con `@FutureOrPresent`), por lo que "hoy" es válido en cualquier zona horaria.
+  - `fechaVencimiento`: String fecha (`YYYY-MM-DD`), obligatorio. Debe ser hoy o futura según la zona horaria de negocio (`America/Santiago` por defecto, configurable con `APP_TIMEZONE`); se valida en el servicio con el `Clock` inyectado, no con `@FutureOrPresent`.
   - `cantidad`: Entero, obligatorio, mínimo 1.
   - `categoria`: Enum `CategoriaEnum`, opcional, default `"OTROS"`.
 - **Respuestas:**
