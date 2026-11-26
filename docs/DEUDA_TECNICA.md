@@ -12,7 +12,8 @@
 
 ## Inventario y recetas
 - Campo opcional `nombreIngles` en artículos; el frontend aporta la tabla de traducción español→inglés (Spoonacular solo entiende inglés).
-- RF-04 filtros de inventario (categoría y búsqueda), RF-07 autocompletado de nombres, RF-12 detalle de receta (ingredientes y pasos).
+- RF-04 filtros de inventario (categoría y búsqueda), RF-07 autocompletado de nombres.
+- Traducir al español el contenido de las recetas de Spoonacular: título, ingredientes y pasos llegan en inglés.
 
 ## Plataforma y operación
 - ShedLock para el cron con varias instancias.
