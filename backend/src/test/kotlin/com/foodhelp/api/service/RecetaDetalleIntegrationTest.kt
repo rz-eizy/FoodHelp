@@ -10,6 +10,12 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.restclient.test.autoconfigure.RestClientTest
+import org.springframework.boot.test.context.TestConfiguration
+import org.springframework.cache.CacheManager
+import org.springframework.cache.annotation.EnableCaching
+import org.springframework.cache.concurrent.ConcurrentMapCacheManager
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Import
 import org.springframework.http.HttpMethod
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
@@ -22,6 +28,7 @@ import org.springframework.test.web.client.response.MockRestResponseCreators.wit
 import org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess
 
 @RestClientTest(RecetaIntegrationService::class)
+@Import(RecetaDetalleIntegrationTest.CachePruebaConfig::class)
 @TestPropertySource(
     properties = [
         "spoonacular.api.key=api_key_test_123",
@@ -29,6 +36,13 @@ import org.springframework.test.web.client.response.MockRestResponseCreators.wit
     ],
 )
 class RecetaDetalleIntegrationTest {
+    @TestConfiguration
+    @EnableCaching
+    class CachePruebaConfig {
+        @Bean
+        fun cacheManager(): CacheManager = ConcurrentMapCacheManager("recetas", "detalle-recetas")
+    }
+
     @Autowired
     private lateinit var recetaIntegrationService: RecetaIntegrationService
 
@@ -136,6 +150,20 @@ class RecetaDetalleIntegrationTest {
         val detalle = recetaIntegrationService.obtenerDetalleReceta(1)!!
 
         assertEquals(1, detalle.id)
+        server.verify()
+    }
+
+    @Test
+    fun `la segunda consulta de una receta no vuelve a spoonacular`() {
+        server
+            .expect(requestTo(containsString("/recipes/55/information")))
+            .andRespond(withSuccess("""{"id":55,"title":"Receta en cache"}""", MediaType.APPLICATION_JSON))
+
+        val primera = recetaIntegrationService.obtenerDetalleReceta(55)
+        val segunda = recetaIntegrationService.obtenerDetalleReceta(55)
+
+        assertEquals(primera, segunda)
+        assertEquals("Receta en cache", segunda!!.title)
         server.verify()
     }
 }
