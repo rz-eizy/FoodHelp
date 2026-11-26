@@ -13,7 +13,7 @@ spring:
       connect-timeout: 3s
       read-timeout: 5s
   cache:
-    cache-names: recetas
+    cache-names: recetas, detalle-recetas
     caffeine:
       spec: maximumSize=500,expireAfterWrite=6h
   jpa:
