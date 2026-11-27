@@ -36,7 +36,7 @@ class RecetaController(
             inventario
                 .sortedBy { it.fechaVencimiento }
                 .take(MAX_INGREDIENTES)
-                .map { it.nombre }
+                .map { it.nombreIngles ?: it.nombre }
 
         return ResponseEntity.ok(recetaIntegrationService.obtenerRecetasPorIngredientes(ingredientes))
     }

@@ -6,6 +6,12 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.restclient.test.autoconfigure.RestClientTest
+import org.springframework.boot.test.context.TestConfiguration
+import org.springframework.cache.CacheManager
+import org.springframework.cache.annotation.EnableCaching
+import org.springframework.cache.concurrent.ConcurrentMapCacheManager
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Import
 import org.springframework.http.HttpMethod
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
@@ -18,6 +24,7 @@ import org.springframework.test.web.client.response.MockRestResponseCreators.wit
 import org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess
 
 @RestClientTest(RecetaIntegrationService::class)
+@Import(RecetaIntegrationServiceTest.CachePruebaConfig::class)
 @TestPropertySource(
     properties = [
         "spoonacular.api.key=api_key_test_123",
@@ -89,6 +96,32 @@ class RecetaIntegrationServiceTest {
         val resultado = recetaIntegrationService.obtenerRecetasPorIngredientes(ingredientes)
 
         assertTrue(resultado.isEmpty())
+        server.verify()
+    }
+
+    @TestConfiguration
+    @EnableCaching
+    class CachePruebaConfig {
+        @Bean
+        fun cacheManager(): CacheManager = ConcurrentMapCacheManager("recetas", "detalle-recetas")
+    }
+
+    @Test
+    fun `Test 4 - la clave de cache usa los ingredientes enviados y distingue nombre y nombre en ingles`() {
+        val jsonReceta =
+            """
+            [{"id": 1, "title": "Receta", "image": null, "missedIngredientCount": 0}]
+            """.trimIndent()
+
+        server
+            .expect(requestTo(containsString("ingredients=milk")))
+            .andRespond(withSuccess(jsonReceta, MediaType.APPLICATION_JSON))
+        server
+            .expect(requestTo(containsString("ingredients=Leche")))
+            .andRespond(withSuccess(jsonReceta, MediaType.APPLICATION_JSON))
+
+        assertEquals(1, recetaIntegrationService.obtenerRecetasPorIngredientes(listOf("milk")).size)
+        assertEquals(1, recetaIntegrationService.obtenerRecetasPorIngredientes(listOf("Leche")).size)
         server.verify()
     }
 }
