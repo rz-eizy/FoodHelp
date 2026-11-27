@@ -71,6 +71,7 @@ class InventarioService(
                 cantidad = request.cantidad,
                 categoria = request.categoria,
                 hogar = hogar,
+                nombreIngles = request.nombreIngles?.trim()?.takeIf { it.isNotEmpty() },
             )
         val guardado = articuloRepository.save(articulo)
         alertaService.sincronizarDeArticulo(guardado)
@@ -134,7 +135,12 @@ class InventarioService(
         hogarId: UUID,
         request: ActualizarArticuloRequest,
     ): ArticuloDTO {
-        if (request.nombre == null && request.fechaVencimiento == null && request.cantidad == null && request.categoria == null) {
+        if (request.nombre == null &&
+            request.fechaVencimiento == null &&
+            request.cantidad == null &&
+            request.categoria == null &&
+            request.nombreIngles == null
+        ) {
             throw SolicitudInvalidaException("Debes enviar al menos un campo para actualizar")
         }
 
@@ -156,6 +162,9 @@ class InventarioService(
         }
 
         request.nombre?.let { articulo.nombre = it.trim() }
+        request.nombreIngles?.let { nombreIngles ->
+            articulo.nombreIngles = nombreIngles.trim().takeIf { it.isNotEmpty() }
+        }
         request.cantidad?.let { articulo.cantidad = it }
         request.categoria?.let { articulo.categoria = it }
         if (request.fechaVencimiento != null) {

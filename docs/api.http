@@ -148,7 +148,8 @@ Authorization: Bearer {{token}}
 ### 5.4. Agregar nuevo artículo al inventario
 # Categorías válidas: LACTEOS, CARNES, VEGETALES, FRUTAS, BEBIDAS, PANADERIA, DESPENSA, CONGELADOS, OTROS.
 # fechaVencimiento debe ser formato YYYY-MM-DD y no puede ser anterior a hoy en la zona de negocio (America/Santiago por defecto, APP_TIMEZONE): 400 con $.codigo=FECHA_VENCIMIENTO_PASADA. Hoy es valido.
-# HTTP 201 Created -> ArticuloDTO
+# nombreIngles es opcional (max 120 caracteres): se recorta con trim y vacio se guarda como null.
+# HTTP 201 Created -> ArticuloDTO (incluye nombreIngles)
 POST {{baseUrl}}/api/inventario
 Authorization: Bearer {{token}}
 Content-Type: application/json
@@ -157,11 +158,13 @@ Content-Type: application/json
   "nombre": "Leche Descremada 1L",
   "fechaVencimiento": "2026-12-31",
   "cantidad": 2,
-  "categoria": "LACTEOS"
+  "categoria": "LACTEOS",
+  "nombreIngles": "milk"
 }
 
 ### 5.5. Actualizar artículo parcialmente (PATCH)
-# articuloId debe ser UUID del artículo. Se puede modificar nombre, fechaVencimiento, cantidad, categoria.
+# articuloId debe ser UUID del artículo. Se puede modificar nombre, fechaVencimiento, cantidad, categoria, nombreIngles.
+# nombreIngles: ausente/null no cambia; "" o espacios borra el valor; texto lo reemplaza recortado con trim.
 # Enviar cantidad 0 elimina el articulo y sus alertas: responde 200 con cantidad 0 y no aplica los demas campos.
 # La fechaVencimiento no puede ser anterior a hoy en la zona de negocio (America/Santiago por defecto, APP_TIMEZONE): 400 con $.codigo=FECHA_VENCIMIENTO_PASADA.
 # HTTP 200 OK -> ArticuloDTO actualizado
@@ -172,7 +175,8 @@ Content-Type: application/json
 
 {
   "nombre": "Leche Descremada Sin Lactosa",
-  "cantidad": 3
+  "cantidad": 3,
+  "nombreIngles": "milk"
 }
 
 ### 5.6. Restar cantidad a un artículo (vía Body)

@@ -393,7 +393,8 @@ Utilizado para clasificar los artículos del inventario de despensa:
         "fechaVencimiento": "2026-12-20",
         "cantidad": 2,
         "categoria": "LACTEOS",
-        "hogarId": "e4b9d032-124b-4a5f-9562-b9e7bdfa1832"
+        "hogarId": "e4b9d032-124b-4a5f-9562-b9e7bdfa1832",
+        "nombreIngles": "milk"
       }
     ]
     ```
@@ -419,15 +420,17 @@ Utilizado para clasificar los artículos del inventario de despensa:
     "nombre": "Arroz Integral 1kg",
     "fechaVencimiento": "2026-11-30",
     "cantidad": 3,
-    "categoria": "DESPENSA"
+    "categoria": "DESPENSA",
+    "nombreIngles": "rice"
   }
   ```
   - `nombre`: String, obligatorio, máx 120 caracteres.
   - `fechaVencimiento`: String fecha (`YYYY-MM-DD`), obligatorio. Debe ser hoy o futura según la zona horaria de negocio (`America/Santiago` por defecto, configurable con `APP_TIMEZONE`); se valida en el servicio con el `Clock` inyectado, no con `@FutureOrPresent`.
   - `cantidad`: Entero, obligatorio, mínimo 1.
   - `categoria`: Enum `CategoriaEnum`, opcional, default `"OTROS"`.
+  - `nombreIngles`: String opcional, máx 120 caracteres. Se recorta con `trim()`; si queda vacío se guarda como `null`. Se usa al buscar recetas.
 - **Respuestas:**
-  - `201 Created`: `ArticuloDTO` creado.
+  - `201 Created`: `ArticuloDTO` creado (incluye `nombreIngles`, `null` si no se envió).
   - `400 Bad Request`: Campos inválidos o fecha de vencimiento anterior a hoy (`SolicitudInvalidaException`: `{"error": "La fecha de vencimiento no puede ser anterior a hoy"}`).
   - `401 Unauthorized`: Token inválido.
   - `403 Forbidden`: Usuario sin hogar.
@@ -461,14 +464,16 @@ Utilizado para clasificar los artículos del inventario de despensa:
     "nombre": "Leche Entera",
     "fechaVencimiento": "2026-12-25",
     "cantidad": 4,
-    "categoria": "LACTEOS"
+    "categoria": "LACTEOS",
+    "nombreIngles": "milk"
   }
   ```
-  *Todos los campos son opcionales, pero al menos uno debe ser provisto y con valor válido:*
+  *Todos los campos son opcionales, pero al menos uno debe ser provisto y con valor válido (enviar solo `nombreIngles` cuenta como cambio):*
   - `nombre`: String opcional, máx 120 caracteres, no puede ser vacío ni espacios en blanco.
-  - `fechaVencimiento`: String fecha (`YYYY-MM-DD`) opcional, hoy o futura (fecha pasada → 400). Al actualizar la fecha, cualquier alerta asociada se limpia automáticamente.
+  - `fechaVencimiento`: String fecha (`YYYY-MM-DD`) opcional, hoy o futura (fecha pasada → 400). Al actualizar la fecha, la alerta asociada se sincroniza con la nueva fecha.
   - `cantidad`: Entero opcional, mínimo 0. Si se envía `0`, el artículo y sus alertas se eliminan, se responde `200 OK` con `cantidad: 0` y no se aplican los demás campos del cuerpo.
   - `categoria`: Enum `CategoriaEnum` opcional.
+  - `nombreIngles`: String opcional, máx 120 caracteres. Ausente o `null` = no cambia; `""` o solo espacios = borra el valor (`null`); cualquier otro texto se recorta con `trim()` y reemplaza el anterior.
 - **Respuestas:**
   - `200 OK`: `ArticuloDTO` actualizado.
   - `400 Bad Request`: Cuerpo sin cambios válidos, fecha de vencimiento anterior a hoy o validación fallida (nombre en blanco, cantidad negativa); todas son `SolicitudInvalidaException` o errores de validación con `$.error`.
@@ -567,7 +572,7 @@ Utilizado para clasificar los artículos del inventario de despensa:
 
 #### `GET /api/recetas/sugerencias`
 - **Autenticación:** Requerida (`Bearer`).
-- **Descripción:** Obtiene sugerencias de recetas basadas en los ingredientes del inventario del hogar que están más próximos a caducar (toma hasta un máximo de 3 artículos). Utiliza la API de Spoonacular con caché en memoria de 6 horas.
+- **Descripción:** Obtiene sugerencias de recetas basadas en los ingredientes del inventario del hogar que están más próximos a caducar (toma hasta un máximo de 3 artículos). Utiliza la API de Spoonacular con caché en memoria de 6 horas. Por cada artículo se envía `nombreIngles` si está definido y, si no, `nombre`; la clave de caché son los textos realmente enviados, por lo que `Leche` y `milk` producen entradas distintas.
 - **Respuestas:**
   - `200 OK`:
     ```json

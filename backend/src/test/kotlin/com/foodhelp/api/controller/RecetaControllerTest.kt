@@ -15,6 +15,7 @@ import com.foodhelp.api.security.UsuarioActualService
 import com.foodhelp.api.service.InventarioService
 import com.foodhelp.api.service.RecetaIntegrationService
 import org.junit.jupiter.api.Test
+import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
@@ -210,5 +211,40 @@ class RecetaControllerTest {
             .perform(get("/api/recetas/101"))
             .andExpect(status().isBadGateway)
             .andExpect(jsonPath("$.codigo").value("SERVICIO_EXTERNO_NO_DISPONIBLE"))
+    }
+
+    @Test
+    @WithMockUser(username = "chef@foodhelp.com")
+    fun `Test 9 - sugerencias usan el nombre en ingles y conservan el nombre cuando falta`() {
+        `when`(usuarioActualService.hogarIdActual()).thenReturn(hogarId)
+        val articulos =
+            listOf(
+                ArticuloDTO(
+                    id = UUID.randomUUID(),
+                    nombre = "Leche",
+                    fechaVencimiento = LocalDate.now().plusDays(1),
+                    cantidad = 1,
+                    categoria = CategoriaEnum.LACTEOS,
+                    hogarId = hogarId,
+                    nombreIngles = "milk",
+                ),
+                ArticuloDTO(
+                    id = UUID.randomUUID(),
+                    nombre = "Tomate",
+                    fechaVencimiento = LocalDate.now().plusDays(2),
+                    cantidad = 1,
+                    categoria = CategoriaEnum.VEGETALES,
+                    hogarId = hogarId,
+                ),
+            )
+        `when`(inventarioService.obtenerInventarioVigente(hogarId)).thenReturn(articulos)
+        `when`(recetaIntegrationService.obtenerRecetasPorIngredientes(listOf("milk", "Tomate")))
+            .thenReturn(emptyList())
+
+        mockMvc
+            .perform(get("/api/recetas/sugerencias"))
+            .andExpect(status().isOk)
+
+        verify(recetaIntegrationService).obtenerRecetasPorIngredientes(listOf("milk", "Tomate"))
     }
 }

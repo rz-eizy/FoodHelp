@@ -42,6 +42,8 @@ class ArticuloDespensa(
     @JoinColumn(name = "hogar_id", nullable = false)
     @OnDelete(action = OnDeleteAction.CASCADE)
     val hogar: Hogar,
+    @Column(name = "nombre_ingles", length = 120)
+    var nombreIngles: String? = null,
 ) {
     override fun toString(): String =
         "ArticuloDespensa(id=$id, nombre='$nombre', fechaVencimiento=$fechaVencimiento, cantidad=$cantidad, categoria=$categoria)"
