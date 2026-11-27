@@ -11,7 +11,7 @@
 - Diseño previsto: tabla `dispositivos_fcm` (usuario, token único, plataforma, fechas), `PUT /api/usuarios/me/dispositivos` (idempotente, máx. 10 por usuario) y `POST /api/usuarios/me/dispositivos/baja`; interfaz `NotificadorPush` con implementación real (`firebase-admin`) y otra vacía si `app.fcm.enabled=false`; una notificación diaria resumen por hogar ("N por vencer, M vencidos") mientras existan artículos con alerta; los tokens inválidos se purgan; un fallo de FCM nunca aborta el monitoreo; logout y eliminación de cuenta borran los dispositivos. Credenciales de Firebase fuera del repo y de la imagen. Con más de una instancia hace falta ShedLock para no duplicar envíos.
 
 ## Inventario y recetas
-- Campo opcional `nombreIngles` en artículos; el frontend aporta la tabla de traducción español→inglés (Spoonacular solo entiende inglés).
+- Diccionario español→inglés en el servidor para artículos sin `nombreIngles` (Spoonacular solo entiende inglés).
 - RF-04 filtros de inventario (categoría y búsqueda), RF-07 autocompletado de nombres.
 - Traducir al español el contenido de las recetas de Spoonacular: título, ingredientes y pasos llegan en inglés.
 
