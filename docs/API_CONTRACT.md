@@ -411,6 +411,17 @@ Utilizado para clasificar los artículos del inventario de despensa:
   - `401 Unauthorized`: Token inválido.
   - `403 Forbidden`: El usuario no pertenece a ese hogar.
 
+#### `GET /api/inventario/{articuloId}`
+- **Autenticación:** Requerida (`Bearer`).
+- **Descripción:** Devuelve un artículo del hogar del usuario autenticado. Permite abrir el producto desde una alerta.
+- **Parámetros de ruta:** `articuloId` (UUID).
+- **Respuestas:**
+  - `200 OK`: `ArticuloDTO` del artículo (incluye `nombreIngles`, `null` si no se registró).
+  - `400 Bad Request`: UUID inválido (`PARAMETRO_INVALIDO`).
+  - `401 Unauthorized`: Token inválido.
+  - `403 Forbidden`: Usuario sin hogar (`SIN_HOGAR`).
+  - `404 Not Found`: Artículo inexistente o perteneciente a otro hogar (`ARTICULO_NO_ENCONTRADO`); ambos casos devuelven la misma respuesta.
+
 #### `POST /api/inventario`
 - **Autenticación:** Requerida (`Bearer`).
 - **Descripción:** Registra un nuevo artículo en el inventario del hogar actual.
@@ -497,7 +508,7 @@ Utilizado para clasificar los artículos del inventario de despensa:
 
 #### `GET /api/alertas`
 - **Autenticación:** Requerida (`Bearer`).
-- **Descripción:** Lista las alertas de vencimiento del hogar del usuario autenticado, ordenadas por fecha de creación descendente.
+- **Descripción:** Lista las alertas de vencimiento del hogar del usuario autenticado, ordenadas por urgencia: `diasRestantes` ascendente (los vencidos, con valores negativos, primero), luego `fechaCreacion` ascendente y `id` ascendente como desempate estable. El orden se aplica también con el filtro `leida` y a través de la paginación.
 - **Ciclo de vida:** mientras exista un artículo con `cantidad > 0` cuya fecha de vencimiento esté dentro de los próximos 10 días (o ya haya pasado), existe su alerta. El monitor actualiza `diasRestantes` en cada ejecución; si el producto vence (`diasRestantes < 0`), el campo `vencido` es `true` y la alerta vuelve a `leida: false` aunque hubiera sido marcada como leída. La alerta desaparece al eliminar el artículo, al agotar su stock (`cantidad = 0`) o al mover la fecha a más de 10 días. La creación y edición de artículos sincronizan la alerta de inmediato, sin esperar al monitor. El monitor ya no consulta Spoonacular: las sugerencias se obtienen solo desde `GET /api/recetas/sugerencias`.
 - **Query Params:**
   - `page`: Entero, default `0`.
@@ -525,7 +536,7 @@ Utilizado para clasificar los artículos del inventario de despensa:
 
 #### `GET /api/alertas/hogar/{hogarId}`
 - **Autenticación:** Requerida (`Bearer`).
-- **Descripción:** Lista las alertas de un hogar específico por ID. El usuario debe pertenecer al hogar.
+- **Descripción:** Lista las alertas de un hogar específico por ID, con el mismo orden por urgencia que `GET /api/alertas` (`diasRestantes`, `fechaCreacion` e `id` ascendentes). El usuario debe pertenecer al hogar.
 - **Parámetros de ruta:** `hogarId` (UUID).
 - **Query Params:** `page` (default 0), `size` (default 50, máx 100).
 - **Respuestas:**
