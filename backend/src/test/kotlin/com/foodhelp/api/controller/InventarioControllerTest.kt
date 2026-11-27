@@ -21,6 +21,7 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.time.LocalDate
@@ -116,5 +117,29 @@ class InventarioControllerTest {
             ).andExpect(status().isNoContent)
 
         verify(inventarioService).eliminarArticulo(articuloId, hogarId)
+    }
+
+    @Test
+    @WithMockUser
+    fun `Test 4 - rechaza un nombre en ingles de mas de 120 caracteres con 400 VALIDACION`() {
+        val nombreLargo = "m".repeat(121)
+        val cuerpo =
+            """
+            {
+              "nombre": "Leche",
+              "fechaVencimiento": "2026-12-31",
+              "cantidad": 1,
+              "nombreIngles": "$nombreLargo"
+            }
+            """.trimIndent()
+
+        mockMvc
+            .perform(
+                post("/api/inventario")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(cuerpo),
+            ).andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.codigo").value("VALIDACION"))
+            .andExpect(jsonPath("$.campos.nombreIngles").exists())
     }
 }

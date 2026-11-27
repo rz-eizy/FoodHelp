@@ -17,6 +17,7 @@ data class ArticuloDTO(
     val cantidad: Int,
     val categoria: CategoriaEnum,
     val hogarId: UUID,
+    val nombreIngles: String? = null,
 ) {
     companion object {
         fun fromEntity(entity: ArticuloDespensa): ArticuloDTO =
@@ -30,6 +31,7 @@ data class ArticuloDTO(
                 cantidad = entity.cantidad,
                 categoria = entity.categoria,
                 hogarId = checkNotNull(entity.hogar.id) { "El hogar del artículo '${entity.nombre}' no está persistido" },
+                nombreIngles = entity.nombreIngles,
             )
     }
 }
@@ -43,6 +45,8 @@ data class CrearArticuloRequest(
     @field:Min(value = 1, message = "La cantidad debe ser al menos 1")
     val cantidad: Int,
     val categoria: CategoriaEnum = CategoriaEnum.OTROS,
+    @field:Size(max = 120, message = "El nombre en inglés no puede superar 120 caracteres")
+    val nombreIngles: String? = null,
 )
 
 data class RestarCantidadRequest(
@@ -58,4 +62,6 @@ data class ActualizarArticuloRequest(
     @field:Min(value = 0, message = "La cantidad no puede ser negativa")
     val cantidad: Int? = null,
     val categoria: CategoriaEnum? = null,
+    @field:Size(max = 120, message = "El nombre en inglés no puede superar 120 caracteres")
+    val nombreIngles: String? = null,
 )

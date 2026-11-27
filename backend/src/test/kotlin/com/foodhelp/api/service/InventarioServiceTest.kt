@@ -13,10 +13,12 @@ import com.foodhelp.api.repository.AlertaRepository
 import com.foodhelp.api.repository.ArticuloRepository
 import com.foodhelp.api.repository.HogarRepository
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
+import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchers.anyInt
 import org.mockito.Mock
@@ -286,6 +288,7 @@ class InventarioServiceTest {
                 cantidad = art.cantidad,
                 categoria = art.categoria,
                 hogar = art.hogar,
+                nombreIngles = art.nombreIngles,
             )
         }
 
@@ -335,6 +338,7 @@ class InventarioServiceTest {
                 cantidad = art.cantidad,
                 categoria = art.categoria,
                 hogar = art.hogar,
+                nombreIngles = art.nombreIngles,
             )
         }
 
@@ -446,5 +450,175 @@ class InventarioServiceTest {
         )
 
         verify(alertaService).sincronizarDeArticulo(articulo)
+    }
+
+    private fun guardarConId() {
+        `when`(articuloRepository.save(anyArticulo())).thenAnswer { invocacion ->
+            val articulo = invocacion.arguments[0] as ArticuloDespensa
+            ArticuloDespensa(
+                id = UUID.randomUUID(),
+                nombre = articulo.nombre,
+                fechaVencimiento = articulo.fechaVencimiento,
+                cantidad = articulo.cantidad,
+                categoria = articulo.categoria,
+                hogar = articulo.hogar,
+                nombreIngles = articulo.nombreIngles,
+            )
+        }
+    }
+
+    @Test
+    fun `crearArticulo normaliza el nombre en ingles con trim`() {
+        `when`(hogarRepository.findById(hogarId)).thenReturn(Optional.of(hogar))
+        guardarConId()
+
+        val creado =
+            inventarioService.crearArticulo(
+                hogarId,
+                CrearArticuloRequest(
+                    nombre = "Leche",
+                    fechaVencimiento = hoy.plusDays(3),
+                    cantidad = 1,
+                    nombreIngles = "  milk  ",
+                ),
+            )
+
+        assertEquals("milk", creado.nombreIngles)
+        val captor = ArgumentCaptor.forClass(ArticuloDespensa::class.java)
+        verify(articuloRepository).save(captor.capture())
+        assertEquals("milk", captor.value.nombreIngles)
+    }
+
+    @Test
+    fun `crearArticulo convierte el nombre en ingles en blanco en null`() {
+        `when`(hogarRepository.findById(hogarId)).thenReturn(Optional.of(hogar))
+        guardarConId()
+
+        val creado =
+            inventarioService.crearArticulo(
+                hogarId,
+                CrearArticuloRequest(
+                    nombre = "Leche",
+                    fechaVencimiento = hoy.plusDays(3),
+                    cantidad = 1,
+                    nombreIngles = "   ",
+                ),
+            )
+
+        assertNull(creado.nombreIngles)
+    }
+
+    @Test
+    fun `crearArticulo sin nombre en ingles lo deja null`() {
+        `when`(hogarRepository.findById(hogarId)).thenReturn(Optional.of(hogar))
+        guardarConId()
+
+        val creado =
+            inventarioService.crearArticulo(
+                hogarId,
+                CrearArticuloRequest(
+                    nombre = "Leche",
+                    fechaVencimiento = hoy.plusDays(3),
+                    cantidad = 1,
+                ),
+            )
+
+        assertNull(creado.nombreIngles)
+    }
+
+    @Test
+    fun `actualizarArticulo establece y borra el nombre en ingles`() {
+        val articuloId = UUID.randomUUID()
+        val articulo =
+            ArticuloDespensa(
+                id = articuloId,
+                nombre = "Leche",
+                fechaVencimiento = hoy.plusDays(5),
+                cantidad = 2,
+                hogar = hogar,
+                nombreIngles = "milk",
+            )
+        `when`(articuloRepository.findById(articuloId)).thenReturn(Optional.of(articulo))
+
+        val establecido =
+            inventarioService.actualizarArticulo(
+                articuloId,
+                hogarId,
+                ActualizarArticuloRequest(nombreIngles = "  cheese  "),
+            )
+        assertEquals("cheese", establecido.nombreIngles)
+
+        val borrado =
+            inventarioService.actualizarArticulo(
+                articuloId,
+                hogarId,
+                ActualizarArticuloRequest(nombreIngles = ""),
+            )
+        assertNull(borrado.nombreIngles)
+    }
+
+    @Test
+    fun `actualizarArticulo sin nombre en ingles no modifica el anterior`() {
+        val articuloId = UUID.randomUUID()
+        val articulo =
+            ArticuloDespensa(
+                id = articuloId,
+                nombre = "Leche",
+                fechaVencimiento = hoy.plusDays(5),
+                cantidad = 2,
+                hogar = hogar,
+                nombreIngles = "milk",
+            )
+        `when`(articuloRepository.findById(articuloId)).thenReturn(Optional.of(articulo))
+
+        val actualizado =
+            inventarioService.actualizarArticulo(
+                articuloId,
+                hogarId,
+                ActualizarArticuloRequest(nombre = "Leche entera"),
+            )
+
+        assertEquals("milk", actualizado.nombreIngles)
+    }
+
+    @Test
+    fun `actualizarArticulo de otro hogar lanza ArticuloNotFoundException`() {
+        val articuloId = UUID.randomUUID()
+        val otroHogar = Hogar(id = UUID.randomUUID(), nombre = "Otro hogar", codigoHogar = "OTRO")
+        val articulo =
+            ArticuloDespensa(
+                id = articuloId,
+                nombre = "Leche",
+                fechaVencimiento = hoy.plusDays(5),
+                cantidad = 2,
+                hogar = otroHogar,
+            )
+        `when`(articuloRepository.findById(articuloId)).thenReturn(Optional.of(articulo))
+
+        assertThrows<ArticuloNotFoundException> {
+            inventarioService.actualizarArticulo(
+                articuloId,
+                hogarId,
+                ActualizarArticuloRequest(nombreIngles = "milk"),
+            )
+        }
+    }
+
+    @Test
+    fun `obtenerInventarioPorHogar incluye el nombre en ingles`() {
+        val articulo =
+            ArticuloDespensa(
+                id = UUID.randomUUID(),
+                nombre = "Leche",
+                fechaVencimiento = hoy.plusDays(5),
+                cantidad = 2,
+                hogar = hogar,
+                nombreIngles = "milk",
+            )
+        `when`(articuloRepository.findByHogarId(hogarId)).thenReturn(listOf(articulo))
+
+        val lista = inventarioService.obtenerInventarioPorHogar(hogarId)
+
+        assertEquals("milk", lista[0].nombreIngles)
     }
 }
