@@ -2,6 +2,7 @@ package com.foodhelp.api.controller
 
 import com.foodhelp.api.config.Paginacion
 import com.foodhelp.api.dto.ArticuloDTO
+import com.foodhelp.api.exception.ArticuloNotFoundException
 import com.foodhelp.api.exception.CantidadInsuficienteException
 import com.foodhelp.api.models.CategoriaEnum
 import com.foodhelp.api.repository.UsuarioRepository
@@ -141,5 +142,46 @@ class InventarioControllerTest {
             ).andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.codigo").value("VALIDACION"))
             .andExpect(jsonPath("$.campos.nombreIngles").exists())
+    }
+
+    @Test
+    @WithMockUser
+    fun `Test 5 - obtiene el detalle de un articulo con su nombre en ingles`() {
+        val articuloId = UUID.randomUUID()
+        val hogarId = UUID.randomUUID()
+        `when`(usuarioActualService.hogarIdActual()).thenReturn(hogarId)
+        `when`(inventarioService.obtenerArticulo(articuloId, hogarId))
+            .thenReturn(
+                ArticuloDTO(
+                    id = articuloId,
+                    nombre = "Leche",
+                    fechaVencimiento = LocalDate.of(2026, 12, 31),
+                    cantidad = 2,
+                    categoria = CategoriaEnum.LACTEOS,
+                    hogarId = hogarId,
+                    nombreIngles = "milk",
+                ),
+            )
+
+        mockMvc
+            .perform(get("/api/inventario/$articuloId"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.id").value(articuloId.toString()))
+            .andExpect(jsonPath("$.nombreIngles").value("milk"))
+    }
+
+    @Test
+    @WithMockUser
+    fun `Test 6 - el detalle de un articulo ajeno responde 404`() {
+        val articuloId = UUID.randomUUID()
+        val hogarId = UUID.randomUUID()
+        `when`(usuarioActualService.hogarIdActual()).thenReturn(hogarId)
+        `when`(inventarioService.obtenerArticulo(articuloId, hogarId))
+            .thenThrow(ArticuloNotFoundException(articuloId))
+
+        mockMvc
+            .perform(get("/api/inventario/$articuloId"))
+            .andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.codigo").value("ARTICULO_NO_ENCONTRADO"))
     }
 }

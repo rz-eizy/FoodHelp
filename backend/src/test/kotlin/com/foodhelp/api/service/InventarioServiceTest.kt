@@ -621,4 +621,32 @@ class InventarioServiceTest {
 
         assertEquals("milk", lista[0].nombreIngles)
     }
+
+    @Test
+    fun `obtenerArticulo devuelve el articulo del hogar con su nombre en ingles`() {
+        val articuloId = UUID.randomUUID()
+        val articulo =
+            ArticuloDespensa(
+                id = articuloId,
+                nombre = "Leche",
+                fechaVencimiento = hoy.plusDays(3),
+                cantidad = 2,
+                hogar = hogar,
+                nombreIngles = "milk",
+            )
+        `when`(articuloRepository.findByIdAndHogarId(articuloId, hogarId)).thenReturn(articulo)
+
+        val obtenido = inventarioService.obtenerArticulo(articuloId, hogarId)
+
+        assertEquals(articuloId, obtenido.id)
+        assertEquals("milk", obtenido.nombreIngles)
+    }
+
+    @Test
+    fun `obtenerArticulo lanza 404 si el articulo no pertenece al hogar`() {
+        val articuloId = UUID.randomUUID()
+        `when`(articuloRepository.findByIdAndHogarId(articuloId, hogarId)).thenReturn(null)
+
+        assertThrows<ArticuloNotFoundException> { inventarioService.obtenerArticulo(articuloId, hogarId) }
+    }
 }

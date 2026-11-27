@@ -18,6 +18,11 @@ interface ArticuloRepository : JpaRepository<ArticuloDespensa, UUID> {
         pageable: Pageable,
     ): Slice<ArticuloDespensa>
 
+    fun findByIdAndHogarId(
+        id: UUID,
+        hogarId: UUID,
+    ): ArticuloDespensa?
+
     @Query(
         "select a from ArticuloDespensa a join fetch a.hogar " +
             "where a.fechaVencimiento <= :hasta and a.cantidad > 0",

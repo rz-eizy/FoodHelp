@@ -46,6 +46,14 @@ class InventarioController(
         return ResponseEntity.ok(inventarioService.obtenerInventarioPaginado(hogarId, page, size))
     }
 
+    @GetMapping("/{articuloId}")
+    fun obtenerArticulo(
+        @PathVariable articuloId: UUID,
+    ): ResponseEntity<ArticuloDTO> =
+        ResponseEntity.ok(
+            inventarioService.obtenerArticulo(articuloId, usuarioActualService.hogarIdActual()),
+        )
+
     @PostMapping
     fun crearArticulo(
         @Valid @RequestBody request: CrearArticuloRequest,
