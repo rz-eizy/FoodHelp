@@ -141,7 +141,7 @@ class AlertaServiceTest {
                 fechaCreacion = hoy,
             )
         val pageable =
-            Paginacion.de(0, 10, Sort.by(Sort.Order.desc("fechaCreacion"), Sort.Order.asc("id")))
+            Paginacion.de(0, 10, Sort.by(Sort.Order.asc("diasRestantes"), Sort.Order.asc("fechaCreacion"), Sort.Order.asc("id")))
         `when`(alertaRepository.findByHogarId(hogarId, pageable)).thenReturn(PageImpl(listOf(alerta)))
         return alertaService.listarPorHogar(hogarId, 0, 10).single()
     }
@@ -174,7 +174,7 @@ class AlertaServiceTest {
                 fechaCreacion = hoy,
             )
         val pageable =
-            Paginacion.de(0, 10, Sort.by(Sort.Order.desc("fechaCreacion"), Sort.Order.asc("id")))
+            Paginacion.de(0, 10, Sort.by(Sort.Order.asc("diasRestantes"), Sort.Order.asc("fechaCreacion"), Sort.Order.asc("id")))
         `when`(alertaRepository.findByHogarIdAndLeida(hogarId, false, pageable)).thenReturn(PageImpl(listOf(alerta)))
 
         val respuesta = alertaService.listarPorHogar(hogarId, 0, 10, false)

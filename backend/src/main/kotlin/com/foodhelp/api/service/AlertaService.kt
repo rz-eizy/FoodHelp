@@ -33,7 +33,16 @@ class AlertaService(
         size: Int,
         leida: Boolean?,
     ): List<AlertaResponse> {
-        val pageable = Paginacion.de(page, size, Sort.by(Sort.Order.desc("fechaCreacion"), Sort.Order.asc("id")))
+        val pageable =
+            Paginacion.de(
+                page,
+                size,
+                Sort.by(
+                    Sort.Order.asc("diasRestantes"),
+                    Sort.Order.asc("fechaCreacion"),
+                    Sort.Order.asc("id"),
+                ),
+            )
         val alertas =
             if (leida == null) {
                 alertaRepository.findByHogarId(hogarId, pageable)

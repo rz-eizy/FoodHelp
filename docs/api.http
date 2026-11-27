@@ -145,6 +145,12 @@ Authorization: Bearer {{token}}
 GET {{baseUrl}}/api/inventario/hogar/{{hogarId}}?page=0&size=50
 Authorization: Bearer {{token}}
 
+### 5.3b. Obtener un articulo por id
+# HTTP 200 OK -> ArticuloDTO (nombreIngles puede ser null). Articulo ajeno o inexistente -> 404 ARTICULO_NO_ENCONTRADO (misma respuesta).
+# Sin token -> 401; sin hogar -> 403 SIN_HOGAR; UUID invalido -> 400 PARAMETRO_INVALIDO.
+GET {{baseUrl}}/api/inventario/{{articuloId}}
+Authorization: Bearer {{token}}
+
 ### 5.4. Agregar nuevo artículo al inventario
 # Categorías válidas: LACTEOS, CARNES, VEGETALES, FRUTAS, BEBIDAS, PANADERIA, DESPENSA, CONGELADOS, OTROS.
 # fechaVencimiento debe ser formato YYYY-MM-DD y no puede ser anterior a hoy en la zona de negocio (America/Santiago por defecto, APP_TIMEZONE): 400 con $.codigo=FECHA_VENCIMIENTO_PASADA. Hoy es valido.
@@ -205,6 +211,7 @@ Authorization: Bearer {{token}}
 ###############################################################################
 
 ### 6.1. Listar alertas del hogar actual
+# Orden: diasRestantes ascendente (vencidos primero), luego fechaCreacion ascendente y id ascendente como desempate estable.
 # Alertas de artículos que vencen en los próximos 10 días o ya vencieron (diasRestantes negativo -> vencido: true).
 # Se sincronizan al crear/editar el artículo y en cada ejecución del monitor; desaparecen si el artículo se elimina, se agota o se aleja a más de 10 días.
 # HTTP 200 OK -> [{"id": "...", "articuloId": "...", "diasRestantes": 2, "leida": false, "vencido": false, ...}]
@@ -220,6 +227,7 @@ GET {{baseUrl}}/api/alertas?leida=false&page=0&size=10
 Authorization: Bearer {{token}}
 
 ### 6.3. Listar alertas por hogarId
+# Mismo orden por urgencia que 6.1 (diasRestantes, fechaCreacion e id ascendentes).
 # Requiere pertenencia al hogar (403 si es ajeno).
 GET {{baseUrl}}/api/alertas/hogar/{{hogarId}}?page=0&size=50
 Authorization: Bearer {{token}}

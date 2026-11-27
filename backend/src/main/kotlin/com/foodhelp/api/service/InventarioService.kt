@@ -50,6 +50,17 @@ class InventarioService(
         return articuloRepository.findByHogarId(hogarId, pageable).content.map { ArticuloDTO.fromEntity(it) }
     }
 
+    @Transactional(readOnly = true)
+    fun obtenerArticulo(
+        articuloId: UUID,
+        hogarId: UUID,
+    ): ArticuloDTO {
+        val articulo =
+            articuloRepository.findByIdAndHogarId(articuloId, hogarId)
+                ?: throw ArticuloNotFoundException(articuloId)
+        return ArticuloDTO.fromEntity(articulo)
+    }
+
     @Transactional
     fun crearArticulo(
         hogarId: UUID,
