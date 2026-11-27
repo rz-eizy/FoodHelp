@@ -1,0 +1,3 @@
+    Colecciones exportadas de Postman/Bruno o el archivo Swagger/OpenAPI. 
+    Esto sirve como la "fuente de la verdad" para los Endpoints REST y DTOs 
+    que conectarán la app móvil con Spring Boot.

@@ -1,0 +1,32 @@
+# Build y dependencias locales
+target/
+.mvn/wrapper/maven-wrapper.jar
+
+# Control de versiones
+.git/
+.gitignore
+.gitattributes
+
+# Entornos y credenciales
+.env
+*.env
+.env.*
+
+# Configuraciones de IDE y editores
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+.classpath
+.project
+.settings/
+
+# Logs y volcados de sistema
+*.log
+*.dump
+*.dumpstream
+
+# Documentación y archivos innecesarios en la imagen
+backend_development.md
+README.md

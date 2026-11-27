@@ -1,0 +1,728 @@
+package com.foodhelp.api.controller
+
+import com.foodhelp.api.models.Alerta
+import com.foodhelp.api.models.ArticuloDespensa
+import com.foodhelp.api.models.Hogar
+import com.foodhelp.api.models.Usuario
+import com.foodhelp.api.repository.AlertaRepository
+import com.foodhelp.api.repository.ArticuloRepository
+import com.foodhelp.api.repository.HogarRepository
+import com.foodhelp.api.repository.UsuarioRepository
+import com.foodhelp.api.security.JwtService
+import com.foodhelp.api.security.tokenParaUsuario
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+import org.springframework.http.MediaType
+import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import java.time.LocalDate
+import java.util.UUID
+
+@SpringBootTest
+@AutoConfigureMockMvc
+class AccesoEntreHogaresTest {
+    @Autowired
+    private lateinit var mockMvc: MockMvc
+
+    @Autowired
+    private lateinit var hogarRepository: HogarRepository
+
+    @Autowired
+    private lateinit var usuarioRepository: UsuarioRepository
+
+    @Autowired
+    private lateinit var articuloRepository: ArticuloRepository
+
+    @Autowired
+    private lateinit var alertaRepository: AlertaRepository
+
+    @Autowired
+    private lateinit var jwtService: JwtService
+
+    private lateinit var hogarPropio: Hogar
+    private lateinit var hogarAjeno: Hogar
+    private lateinit var bearerAna: String
+
+    @BeforeEach
+    fun preparar() {
+        hogarPropio = hogarRepository.save(Hogar(nombre = "Propio", codigoHogar = "PROPIO0001"))
+        hogarAjeno = hogarRepository.save(Hogar(nombre = "Ajeno", codigoHogar = "AJENO00001"))
+        val ana =
+            usuarioRepository.save(
+                Usuario(nombre = "Ana", contrasena = "no-importa", correo = "ana@test.com", hogar = hogarPropio),
+            )
+        bearerAna = "Bearer " + jwtService.tokenParaUsuario(ana)
+    }
+
+    @AfterEach
+    fun limpiar() {
+        alertaRepository.deleteAll()
+        articuloRepository.deleteAll()
+        usuarioRepository.deleteAll()
+        hogarRepository.deleteAll()
+    }
+
+    private fun articulo(
+        hogar: Hogar,
+        cantidad: Int,
+    ) = articuloRepository.save(
+        ArticuloDespensa(
+            nombre = "Arroz",
+            fechaVencimiento = LocalDate.now().plusDays(30),
+            cantidad = cantidad,
+            hogar = hogar,
+        ),
+    )
+
+    private fun alertaDe(articulo: ArticuloDespensa) =
+        alertaRepository.save(
+            Alerta(
+                articuloId = articulo.id!!,
+                nombreProducto = articulo.nombre,
+                diasRestantes = 2,
+                hogarId = hogarPropio.id!!,
+                leida = false,
+                fechaCreacion = LocalDate.now(),
+            ),
+        )
+
+    @Test
+    fun `sin token se responde 401`() {
+        mockMvc.perform(get("/api/inventario")).andExpect(status().isUnauthorized)
+    }
+
+    @Test
+    fun `no se puede leer el inventario de otro hogar`() {
+        mockMvc
+            .perform(get("/api/inventario/hogar/${hogarAjeno.id}").header("Authorization", bearerAna))
+            .andExpect(status().isForbidden)
+    }
+
+    @Test
+    fun `no se puede restar stock de un articulo de otro hogar`() {
+        val ajeno = articulo(hogarAjeno, 5)
+
+        mockMvc
+            .perform(
+                patch("/api/inventario/${ajeno.id}/restar")
+                    .param("cantidad", "1")
+                    .header("Authorization", bearerAna),
+            ).andExpect(status().isNotFound)
+
+        assertEquals(5, articuloRepository.findById(ajeno.id!!).get().cantidad)
+    }
+
+    @Test
+    fun `no se puede eliminar un articulo de otro hogar`() {
+        val ajeno = articulo(hogarAjeno, 5)
+
+        mockMvc
+            .perform(
+                delete("/api/inventario/${ajeno.id}")
+                    .header("Authorization", bearerAna),
+            ).andExpect(status().isNotFound)
+
+        assertTrue(articuloRepository.existsById(ajeno.id!!))
+    }
+
+    @Test
+    fun `no se puede marcar como leida una alerta de otro hogar`() {
+        val ajeno = articulo(hogarAjeno, 2)
+        val alertaAjena =
+            alertaRepository.save(
+                Alerta(
+                    articuloId = ajeno.id!!,
+                    nombreProducto = "Arroz",
+                    diasRestantes = 3,
+                    hogarId = hogarAjeno.id!!,
+                    leida = false,
+                    fechaCreacion = LocalDate.now(),
+                ),
+            )
+
+        mockMvc
+            .perform(
+                patch("/api/alertas/${alertaAjena.id}/leida")
+                    .header("Authorization", bearerAna),
+            ).andExpect(status().isNotFound)
+
+        assertFalse(alertaRepository.findById(alertaAjena.id!!).get().leida)
+    }
+
+    @Test
+    fun `un UUID inexistente devuelve exactamente el mismo codigo y estructura de cuerpo que un UUID ajeno`() {
+        val ajeno = articulo(hogarAjeno, 5)
+        val uuidInexistente = UUID.randomUUID()
+
+        mockMvc
+            .perform(
+                patch("/api/inventario/${ajeno.id}/restar")
+                    .param("cantidad", "1")
+                    .header("Authorization", bearerAna),
+            ).andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.error").exists())
+
+        mockMvc
+            .perform(
+                patch("/api/inventario/$uuidInexistente/restar")
+                    .param("cantidad", "1")
+                    .header("Authorization", bearerAna),
+            ).andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.error").exists())
+    }
+
+    @Test
+    fun `una cantidad negativa se rechaza con 400 y no altera el stock`() {
+        val propio = articulo(hogarPropio, 5)
+
+        mockMvc
+            .perform(
+                patch("/api/inventario/${propio.id}/restar")
+                    .param("cantidad", "-3")
+                    .header("Authorization", bearerAna),
+            ).andExpect(status().isBadRequest)
+
+        assertEquals(5, articuloRepository.findById(propio.id!!).get().cantidad)
+    }
+
+    @Test
+    fun `restar con body cantidad negativa responde 400 con campo y no altera stock`() {
+        val propio = articulo(hogarPropio, 5)
+
+        mockMvc
+            .perform(
+                patch("/api/inventario/${propio.id}/restar")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"cantidad": -5}""")
+                    .header("Authorization", bearerAna),
+            ).andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.campos.cantidad").exists())
+
+        assertEquals(5, articuloRepository.findById(propio.id!!).get().cantidad)
+    }
+
+    @Test
+    fun `restar con body cantidad cero responde 400 y no altera stock`() {
+        val propio = articulo(hogarPropio, 5)
+
+        mockMvc
+            .perform(
+                patch("/api/inventario/${propio.id}/restar")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"cantidad": 0}""")
+                    .header("Authorization", bearerAna),
+            ).andExpect(status().isBadRequest)
+
+        assertEquals(5, articuloRepository.findById(propio.id!!).get().cantidad)
+    }
+
+    @Test
+    fun `crear articulo sin fechaVencimiento responde 400 y no altera el inventario`() {
+        val totalAntes = articuloRepository.count()
+
+        mockMvc
+            .perform(
+                post("/api/inventario")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        """
+                        {
+                            "nombre": "Leche",
+                            "cantidad": 2,
+                            "categoria": "LACTEOS"
+                        }
+                        """.trimIndent(),
+                    ).header("Authorization", bearerAna),
+            ).andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.error").exists())
+
+        assertEquals(totalAntes, articuloRepository.count())
+    }
+
+    @Test
+    fun `obtenerHogar con codigo ajeno y con codigo inexistente responden exactamente 404 y misma estructura`() {
+        mockMvc
+            .perform(
+                get("/api/hogares/${hogarAjeno.codigoHogar}")
+                    .header("Authorization", bearerAna),
+            ).andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.error").exists())
+
+        mockMvc
+            .perform(
+                get("/api/hogares/NOEXISTE99")
+                    .header("Authorization", bearerAna),
+            ).andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.error").exists())
+    }
+
+    @Test
+    fun `actualizar nombre cantidad y categoria de un articulo propio responde 200 con valores nuevos`() {
+        val propio = articulo(hogarPropio, 5)
+
+        mockMvc
+            .perform(
+                patch("/api/inventario/${propio.id}")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        """
+                        {
+                            "nombre": "Arroz Integral",
+                            "cantidad": 8,
+                            "categoria": "DESPENSA"
+                        }
+                        """.trimIndent(),
+                    ).header("Authorization", bearerAna),
+            ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.nombre").value("Arroz Integral"))
+            .andExpect(jsonPath("$.cantidad").value(8))
+            .andExpect(jsonPath("$.categoria").value("DESPENSA"))
+
+        val actualizado = articuloRepository.findById(propio.id!!).get()
+        assertEquals("Arroz Integral", actualizado.nombre)
+        assertEquals(8, actualizado.cantidad)
+    }
+
+    @Test
+    fun `actualizar con body vacio responde 400`() {
+        val propio = articulo(hogarPropio, 5)
+
+        mockMvc
+            .perform(
+                patch("/api/inventario/${propio.id}")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{}")
+                    .header("Authorization", bearerAna),
+            ).andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.error").value("Debes enviar al menos un campo para actualizar"))
+    }
+
+    @Test
+    fun `actualizar con cantidad negativa responde 400 con campos cantidad`() {
+        val propio = articulo(hogarPropio, 5)
+
+        mockMvc
+            .perform(
+                patch("/api/inventario/${propio.id}")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"cantidad": -1}""")
+                    .header("Authorization", bearerAna),
+            ).andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.campos.cantidad").exists())
+    }
+
+    @Test
+    fun `actualizar articulo de otro hogar responde 404 sin cambios`() {
+        val ajeno = articulo(hogarAjeno, 5)
+
+        mockMvc
+            .perform(
+                patch("/api/inventario/${ajeno.id}")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"nombre": "Hack"}""")
+                    .header("Authorization", bearerAna),
+            ).andExpect(status().isNotFound)
+
+        val noCambiado = articuloRepository.findById(ajeno.id!!).get()
+        assertEquals("Arroz", noCambiado.nombre)
+    }
+
+    @Test
+    fun `cambiar fechaVencimiento elimina la alerta existente de ese articulo`() {
+        val propio = articulo(hogarPropio, 5)
+        val alerta =
+            alertaRepository.save(
+                Alerta(
+                    articuloId = propio.id!!,
+                    nombreProducto = "Arroz",
+                    diasRestantes = 2,
+                    hogarId = hogarPropio.id!!,
+                    leida = false,
+                    fechaCreacion = LocalDate.now(),
+                ),
+            )
+        assertTrue(alertaRepository.existsById(alerta.id!!))
+
+        mockMvc
+            .perform(
+                patch("/api/inventario/${propio.id}")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"fechaVencimiento": "${LocalDate.now().plusDays(30)}"}""")
+                    .header("Authorization", bearerAna),
+            ).andExpect(status().isOk)
+
+        assertFalse(alertaRepository.existsById(alerta.id!!))
+    }
+
+    @Test
+    fun `crear articulo con fecha de ayer responde 400 con error y no altera el inventario`() {
+        val totalAntes = articuloRepository.count()
+
+        mockMvc
+            .perform(
+                post("/api/inventario")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        """
+                        {
+                            "nombre": "Leche",
+                            "fechaVencimiento": "${LocalDate.now().minusDays(1)}",
+                            "cantidad": 2,
+                            "categoria": "LACTEOS"
+                        }
+                        """.trimIndent(),
+                    ).header("Authorization", bearerAna),
+            ).andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.error").value("La fecha de vencimiento no puede ser anterior a hoy"))
+
+        assertEquals(totalAntes, articuloRepository.count())
+    }
+
+    @Test
+    fun `crear articulo con fecha de hoy responde 201`() {
+        mockMvc
+            .perform(
+                post("/api/inventario")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        """
+                        {
+                            "nombre": "Leche",
+                            "fechaVencimiento": "${LocalDate.now()}",
+                            "cantidad": 2,
+                            "categoria": "LACTEOS"
+                        }
+                        """.trimIndent(),
+                    ).header("Authorization", bearerAna),
+            ).andExpect(status().isCreated)
+            .andExpect(jsonPath("$.fechaVencimiento").value(LocalDate.now().toString()))
+    }
+
+    @Test
+    fun `editar fecha de vencimiento a una fecha pasada responde 400 y no cambia el articulo`() {
+        val propio = articulo(hogarPropio, 5)
+        val fechaOriginal = propio.fechaVencimiento
+
+        mockMvc
+            .perform(
+                patch("/api/inventario/${propio.id}")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"fechaVencimiento": "${LocalDate.now().minusDays(1)}"}""")
+                    .header("Authorization", bearerAna),
+            ).andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.error").value("La fecha de vencimiento no puede ser anterior a hoy"))
+
+        assertEquals(fechaOriginal, articuloRepository.findById(propio.id!!).get().fechaVencimiento)
+    }
+
+    @Test
+    fun `restar hasta cero responde 200 con cantidad cero y elimina articulo y alerta`() {
+        val propio = articulo(hogarPropio, 1)
+        val alerta = alertaDe(propio)
+
+        mockMvc
+            .perform(
+                patch("/api/inventario/${propio.id}/restar")
+                    .param("cantidad", "1")
+                    .header("Authorization", bearerAna),
+            ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.cantidad").value(0))
+
+        assertFalse(articuloRepository.existsById(propio.id!!))
+        assertFalse(alertaRepository.existsById(alerta.id!!))
+    }
+
+    @Test
+    fun `actualizar a cantidad cero elimina articulo y alerta y no aplica los demas campos`() {
+        val propio = articulo(hogarPropio, 5)
+        val alerta = alertaDe(propio)
+
+        mockMvc
+            .perform(
+                patch("/api/inventario/${propio.id}")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"nombre": "Hack", "cantidad": 0}""")
+                    .header("Authorization", bearerAna),
+            ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.cantidad").value(0))
+            .andExpect(jsonPath("$.nombre").value("Arroz"))
+
+        assertFalse(articuloRepository.existsById(propio.id!!))
+        assertFalse(alertaRepository.existsById(alerta.id!!))
+    }
+
+    @Test
+    fun `eliminar articulo elimina tambien su alerta`() {
+        val propio = articulo(hogarPropio, 5)
+        val alerta = alertaDe(propio)
+
+        mockMvc
+            .perform(
+                delete("/api/inventario/${propio.id}")
+                    .header("Authorization", bearerAna),
+            ).andExpect(status().isNoContent)
+
+        assertFalse(articuloRepository.existsById(propio.id!!))
+        assertFalse(alertaRepository.existsById(alerta.id!!))
+    }
+
+    @Test
+    fun `restar mas unidades que el stock responde 400 y deja el stock intacto`() {
+        val propio = articulo(hogarPropio, 5)
+
+        mockMvc
+            .perform(
+                patch("/api/inventario/${propio.id}/restar")
+                    .param("cantidad", "6")
+                    .header("Authorization", bearerAna),
+            ).andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.error").exists())
+
+        assertEquals(5, articuloRepository.findById(propio.id!!).get().cantidad)
+    }
+
+    @Test
+    fun `crear articulo que vence en tres dias crea su alerta al instante`() {
+        mockMvc
+            .perform(
+                post("/api/inventario")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        """
+                        {
+                            "nombre": "Leche",
+                            "fechaVencimiento": "${LocalDate.now().plusDays(3)}",
+                            "cantidad": 2,
+                            "categoria": "LACTEOS"
+                        }
+                        """.trimIndent(),
+                    ).header("Authorization", bearerAna),
+            ).andExpect(status().isCreated)
+
+        val creado = articuloRepository.findByHogarId(hogarPropio.id!!).single()
+        val alerta = alertaRepository.findByArticuloId(creado.id!!)
+        assertTrue(alerta != null)
+        assertEquals(3, alerta!!.diasRestantes)
+        assertFalse(alerta.leida)
+    }
+
+    @Test
+    fun `editar fecha actualiza la alerta al instante y la elimina si queda a mas de diez dias`() {
+        val propio = articulo(hogarPropio, 30)
+
+        mockMvc
+            .perform(
+                patch("/api/inventario/${propio.id}")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"fechaVencimiento": "${LocalDate.now().plusDays(3)}"}""")
+                    .header("Authorization", bearerAna),
+            ).andExpect(status().isOk)
+
+        val alerta = alertaRepository.findByArticuloId(propio.id!!)
+        assertTrue(alerta != null)
+        assertEquals(3, alerta!!.diasRestantes)
+
+        mockMvc
+            .perform(
+                patch("/api/inventario/${propio.id}")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"fechaVencimiento": "${LocalDate.now().plusDays(30)}"}""")
+                    .header("Authorization", bearerAna),
+            ).andExpect(status().isOk)
+
+        assertTrue(alertaRepository.findByArticuloId(propio.id!!) == null)
+    }
+
+    @Test
+    fun `listar alertas expone vencido en true para una alerta con dias negativos`() {
+        val propio = articulo(hogarPropio, 3)
+        alertaRepository.save(
+            Alerta(
+                articuloId = propio.id!!,
+                nombreProducto = "Arroz",
+                diasRestantes = -2,
+                hogarId = hogarPropio.id!!,
+                leida = false,
+                fechaCreacion = LocalDate.now(),
+            ),
+        )
+
+        mockMvc
+            .perform(get("/api/alertas").header("Authorization", bearerAna))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$[0].diasRestantes").value(-2))
+            .andExpect(jsonPath("$[0].vencido").value(true))
+    }
+
+    @Test
+    fun `filtrar alertas por leida false devuelve solo las no leidas del hogar actual`() {
+        val propioNoLeida = articulo(hogarPropio, 3)
+        alertaDe(propioNoLeida)
+        val propioLeida = articulo(hogarPropio, 4)
+        alertaRepository.save(
+            Alerta(
+                articuloId = propioLeida.id!!,
+                nombreProducto = propioLeida.nombre,
+                diasRestantes = 4,
+                hogarId = hogarPropio.id!!,
+                leida = true,
+                fechaCreacion = LocalDate.now(),
+            ),
+        )
+
+        mockMvc
+            .perform(get("/api/alertas?leida=false").header("Authorization", bearerAna))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.length()").value(1))
+            .andExpect(jsonPath("$[0].leida").value(false))
+    }
+
+    @Test
+    fun `filtrar alertas por leida true devuelve solo las leidas del hogar actual`() {
+        val propioNoLeida = articulo(hogarPropio, 3)
+        alertaDe(propioNoLeida)
+        val propioLeida = articulo(hogarPropio, 4)
+        alertaRepository.save(
+            Alerta(
+                articuloId = propioLeida.id!!,
+                nombreProducto = propioLeida.nombre,
+                diasRestantes = 4,
+                hogarId = hogarPropio.id!!,
+                leida = true,
+                fechaCreacion = LocalDate.now(),
+            ),
+        )
+
+        mockMvc
+            .perform(get("/api/alertas?leida=true").header("Authorization", bearerAna))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.length()").value(1))
+            .andExpect(jsonPath("$[0].leida").value(true))
+    }
+
+    @Test
+    fun `contador de no leidas incluye solo las alertas propias sin leer`() {
+        alertaDe(articulo(hogarPropio, 3))
+        alertaDe(articulo(hogarPropio, 4))
+        val propiaLeida = articulo(hogarPropio, 5)
+        alertaRepository.save(
+            Alerta(
+                articuloId = propiaLeida.id!!,
+                nombreProducto = propiaLeida.nombre,
+                diasRestantes = 5,
+                hogarId = hogarPropio.id!!,
+                leida = true,
+                fechaCreacion = LocalDate.now(),
+            ),
+        )
+        val ajena = articulo(hogarAjeno, 6)
+        alertaRepository.save(
+            Alerta(
+                articuloId = ajena.id!!,
+                nombreProducto = ajena.nombre,
+                diasRestantes = 6,
+                hogarId = hogarAjeno.id!!,
+                leida = false,
+                fechaCreacion = LocalDate.now(),
+            ),
+        )
+
+        mockMvc
+            .perform(get("/api/alertas/no-leidas/contador").header("Authorization", bearerAna))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.noLeidas").value(2))
+    }
+
+    @Test
+    fun `contador de no leidas sin token responde 401`() {
+        mockMvc.perform(get("/api/alertas/no-leidas/contador")).andExpect(status().isUnauthorized)
+    }
+
+    @Test
+    fun `contador de no leidas sin hogar responde 403`() {
+        val sinHogar =
+            usuarioRepository.save(
+                Usuario(nombre = "Sin Hogar", contrasena = "no-importa", correo = "sinhogar@test.com"),
+            )
+
+        mockMvc
+            .perform(
+                get("/api/alertas/no-leidas/contador")
+                    .header("Authorization", "Bearer " + jwtService.tokenParaUsuario(sinHogar)),
+            ).andExpect(status().isForbidden)
+    }
+
+    @Test
+    fun `marcar todas las alertas propias deja el contador a cero sin afectar otro hogar`() {
+        val propiaUno = alertaDe(articulo(hogarPropio, 3))
+        val propiaDos = alertaDe(articulo(hogarPropio, 4))
+        val propiaLeida = articulo(hogarPropio, 5)
+        alertaRepository.save(
+            Alerta(
+                articuloId = propiaLeida.id!!,
+                nombreProducto = propiaLeida.nombre,
+                diasRestantes = 5,
+                hogarId = hogarPropio.id!!,
+                leida = true,
+                fechaCreacion = LocalDate.now(),
+            ),
+        )
+        val ajena = articulo(hogarAjeno, 6)
+        val alertaAjena =
+            alertaRepository.save(
+                Alerta(
+                    articuloId = ajena.id!!,
+                    nombreProducto = ajena.nombre,
+                    diasRestantes = 6,
+                    hogarId = hogarAjeno.id!!,
+                    leida = false,
+                    fechaCreacion = LocalDate.now(),
+                ),
+            )
+
+        mockMvc
+            .perform(post("/api/alertas/marcar-todas-leidas").header("Authorization", bearerAna))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.actualizadas").value(2))
+
+        assertTrue(alertaRepository.findById(propiaUno.id!!).get().leida)
+        assertTrue(alertaRepository.findById(propiaDos.id!!).get().leida)
+        assertFalse(alertaRepository.findById(alertaAjena.id!!).get().leida)
+
+        mockMvc
+            .perform(get("/api/alertas/no-leidas/contador").header("Authorization", bearerAna))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.noLeidas").value(0))
+    }
+
+    @Test
+    fun `marcar todas las alertas sin token responde 401`() {
+        mockMvc.perform(post("/api/alertas/marcar-todas-leidas")).andExpect(status().isUnauthorized)
+    }
+
+    @Test
+    fun `marcar todas las alertas sin hogar responde 403`() {
+        val sinHogar =
+            usuarioRepository.save(
+                Usuario(nombre = "Sin Hogar", contrasena = "no-importa", correo = "sinhogar@test.com"),
+            )
+
+        mockMvc
+            .perform(
+                post("/api/alertas/marcar-todas-leidas")
+                    .header("Authorization", "Bearer " + jwtService.tokenParaUsuario(sinHogar)),
+            ).andExpect(status().isForbidden)
+    }
+}
